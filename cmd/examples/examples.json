@@ -1,0 +1,8 @@
+[
+    {
+        "title": "Data Channels",
+        "link": "data-channels",
+        "description": "The data-channels example shows how you can send/recv DataChannel message from a web browser.",
+        "type": "browser"
+    }
+]
