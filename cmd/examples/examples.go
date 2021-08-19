@@ -13,13 +13,6 @@ func main() {
 	flag.Parse()
 
 	log.Println("Listening on", *addr)
-	err := serve(*addr)
-	if err != nil {
-		log.Fatalf("Failed to serve: %v", err)
-	}
-}
-
-func serve(addr string) error {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Path
@@ -38,8 +31,7 @@ func serve(addr string) error {
 		if err != nil {
 			panic(err)
 		}
-		return
 	})
 
-	return http.ListenAndServe(addr, nil)
+	http.ListenAndServe(*addr, nil)
 }
