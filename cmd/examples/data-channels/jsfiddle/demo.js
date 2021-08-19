@@ -23,7 +23,7 @@ pc.onicecandidate = event => {
     }
 }
 
-pc.onnegotiationneeded = e => pc.createOffer().then(d => pc.SetLocalDescription(d)).catch(log)
+pc.onnegotiationneeded = e => pc.createOffer().then(d => pc.setLocalDescription(d)).catch(log)
 
 window.sendMessage = () => {
     let message = document.getElementById('message').value
