@@ -7,28 +7,41 @@ let pc = new RTCPeerConnection({
 	}
     ]
 })
+
+// Add message to logs
 let log = msg => {
     document.getElementById('logs').innerHTML += msg + '<br>'
 }
 
+// Create a new channel
 let sendChannel = pc.createDataChannel('foo')
+
+// Log message on close
 sendChannel.onclose = () => console.log('sendChannel has closed')
+
+// Log message on open
 sendChannel.onopen = () => console.log('sendChanel has opened')
+
+// Log message on message
 sendChannel.onmessage = e => log(`Message from DataChannel '${sendChannel.label}' payload '${e.data}'`)
 
+// Called when ICE connection state changes
 pc.oniceconnectionstatechange = e => log(pc.iceConnectionState)
+
+// Called on ICE candidate
 pc.onicecandidate = event => {
     if (event.candidate === null) {
-	document.getElementById('localSessionDescription').value = btoa(JSON.stringify(pc.localDescription))
+	    document.getElementById('localSessionDescription').value = btoa(JSON.stringify(pc.localDescription))
     }
 }
 
+// Called when negotiation is needed
 pc.onnegotiationneeded = e => pc.createOffer().then(d => pc.setLocalDescription(d)).catch(log)
 
 window.sendMessage = () => {
     let message = document.getElementById('message').value
     if (message === '') {
-	return alert('Message must not be empty')
+	    return alert('Message must not be empty')
     }
 
     sendChannel.send(message)
@@ -37,12 +50,12 @@ window.sendMessage = () => {
 window.startSession = () => {
     let sd = document.getElementById('remoteSessionDescription').value
     if (sd === '') {
-	return alert('Session Description must not be empty')
+	    return alert('Session Description must not be empty')
     }
 
     try {
-	pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))))
+	    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))))
     } catch(e) {
-	alert(e)
+	    alert(e)
     }
 }

@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+
 	"syscall/js"
 
 	"examples/signal"
@@ -20,22 +21,30 @@ func main() {
 			},
 		},
 	}
+
+	// Create a new RTCPeerConnection
 	pc, err := webrtc.NewPeerConnection(config)
 	if err != nil {
 		handleError(err)
 	}
 
-	// Create DataChannel.
+	// Create a new channel
 	sendChannel, err := pc.CreateDataChannel("foo", nil)
 	if err != nil {
 		handleError(err)
 	}
+
+	// Log message on close
 	sendChannel.OnClose(func() {
 		fmt.Println("sendChannel has closed")
 	})
+
+	// Log message on open
 	sendChannel.OnOpen(func() {
 		fmt.Println("sendChannel has opened")
 	})
+
+	// Log message on message
 	sendChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
 		log(fmt.Sprintf("Message from DataChannel %s payload %s", sendChannel.Label(), string(msg.Data)))
 	})
@@ -45,14 +54,18 @@ func main() {
 	if err != nil {
 		handleError(err)
 	}
+
+	// Set local description
 	if err := pc.SetLocalDescription(offer); err != nil {
 		handleError(err)
 	}
 
-	// Add handlers for setting up the connection.
+	// Called when ICE connection state changes
 	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
 		log(fmt.Sprint(state))
 	})
+
+	// Called on ICE candidate
 	pc.OnICECandidate(func(candidate *webrtc.ICECandidate) {
 		if candidate != nil {
 			encodedDescr := signal.Encode(pc.LocalDescription())
@@ -76,6 +89,7 @@ func main() {
 		}()
 		return js.Undefined()
 	}))
+
 	js.Global().Set("startSession", js.FuncOf(func(_ js.Value, _ []js.Value) interface{} {
 		go func() {
 			el := getElementByID("remoteSessionDescription")
@@ -94,7 +108,6 @@ func main() {
 		return js.Undefined()
 	}))
 
-	// Stay alive
 	select {}
 }
 

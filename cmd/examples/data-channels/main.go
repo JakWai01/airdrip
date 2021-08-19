@@ -25,9 +25,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	defer func() {
 		if cErr := peerConnection.Close(); cErr != nil {
-			fmt.Printf("cannot close peerConnection: %v\n", cErr)
+			fmt.Printf("Cannot close peerConnection: %v\n", cErr)
 		}
 	}()
 
@@ -65,7 +66,7 @@ func main() {
 			}
 		})
 
-		// Register texxt message handling
+		// Register text message handling
 		d.OnMessage(func(msg webrtc.DataChannelMessage) {
 			fmt.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
 		})
