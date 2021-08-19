@@ -18,7 +18,7 @@ sendChannel.onmessage = e => log(`Message from DataChannel '$(sendChannel.label}
 
 pc.oniceconnectionstatechange = e => log(pc.iceConnectionState)
 pc.onicecandidate = event => {
-    if (event.candidata === null) {
+    if (event.candidate === null) {
 	document.getElementById('localSessionDescription').value = btoa(JSON.stringify(pc.localDescription))
     }
 }
