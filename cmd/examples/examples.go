@@ -5,12 +5,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"go/build"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -18,22 +16,22 @@ import (
 type Examples []*Example
 
 var (
-	errListExamples = errors.New("failed to list examples (please run in the exampels folder)")
+	errListExamples  = errors.New("failed to list examples (please run in the exampels folder)")
 	errParseExamples = errors.New("faild to parse examples")
 )
 
 // Example represents an example loaded from examples.json.
 type Example struct {
-	Title string `json:"title"`
-	Link string `json:"link"`
+	Title       string `json:"title"`
+	Link        string `json:"link"`
 	Description string `json:"description"`
-	Type string `json:"type"`
-	IsJS bool 
-	IsWASM bool
+	Type        string `json:"type"`
+	IsJS        bool
+	IsWASM      bool
 }
 
 func main() {
-	addr := flag.String("address", ":80", "Address to host the HTTP server on.")
+	addr := flag.String("address", ":8080", "Address to host the HTTP server on.")
 	flag.Parse()
 
 	log.Println("Listening on", *addr)
@@ -44,7 +42,7 @@ func main() {
 }
 
 func serve(addr string) error {
-	// Load the examples 
+	// Load the examples
 	examples, err := getExamples()
 	if err != nil {
 		return err
@@ -57,10 +55,6 @@ func serve(addr string) error {
 	// DIY 'mux' to avoid additional dependencies
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		url := r.URL.Path
-		if url == "/wasm_exec.js" {
-			http.FileServer(http.Dir(filepath.Join(build.Default.GOROOT, "misc/wasm/"))).ServeHTTP(w, r)
-			return
-		}
 
 		// Split up the URL. Expected parts:
 		// 1: Base url
@@ -69,47 +63,35 @@ func serve(addr string) error {
 		// 4: Example folder, e.g.: data-channels
 		// 5: Static file as part of the example
 		parts := strings.Split(url, "/")
-		if len(parts) > 4 && 
-			parts[1] == "example" {
-				exampleType := parts[2]
-				exampleLink := parts[3]
-				for _, example := range *examples {
-					if example.Link != exampleLink {
-						continue
-					}
-					fiddle := filepath.Join(exampleLink, "jsfiddle")
-					if len(parts[4]) != 0 {
-						http.StripPrefix("/example/"+exampleType+"/"+exampleLink+"/", http.FileServer(http.Dir(fiddle))).ServeHTTP(w, r)
-						return
-					}
 
-					temp := template.Must(template.ParseFiles("example.html"))
-					_, err = temp.ParseFiles(filepath.Join(fiddle, "demo.html"))
-					if err != nil {
-						panic(err)
-					}
-
-					data := struct {
-						*Example
-						JS bool
-					}{
-						example,
-						exampleType == "js",
-					}
-
-					err = temp.Execute(w, data)
-					if err != nil {
-						panic(err)
-					}
-					return
-				}
+		for _, example := range *examples {
+			if len(parts[4]) != 0 {
+				http.StripPrefix("/example/js/data-channels/", http.FileServer(http.Dir("data-channels/jsfiddle"))).ServeHTTP(w, r)
+				return
 			}
 
-			// Serve the main page
-			err = homeTemplate.Execute(w, examples)
+			temp := template.Must(template.ParseFiles("example.html"))
+
+			data := struct {
+				*Example
+				JS bool
+			}{
+				example,
+				true,
+			}
+
+			err = temp.Execute(w, data)
 			if err != nil {
 				panic(err)
 			}
+			return
+		}
+
+		// Serve the main page
+		err = homeTemplate.Execute(w, examples)
+		if err != nil {
+			panic(err)
+		}
 	})
 
 	// Start the server
@@ -119,7 +101,7 @@ func serve(addr string) error {
 // getExamples loads the examples from the examples.json file.
 func getExamples() (*Examples, error) {
 	file, err := os.Open("./examples.json")
-	if err != nil {	
+	if err != nil {
 		return nil, fmt.Errorf("%w: %v", errListExamples, err)
 	}
 	defer func() {
@@ -135,17 +117,7 @@ func getExamples() (*Examples, error) {
 		return nil, fmt.Errorf("%w: %v", errParseExamples, err)
 	}
 
-	for _, example := range examples {
-		fiddle := filepath.Join(example.Link, "jsfiddle")
-		js := filepath.Join(fiddle, "demo.js")
-		if _, err := os.Stat(js); !os.IsNotExist(err) {
-			example.IsJS = true
-		}
-		wasm := filepath.Join(fiddle, "demo.wasm")
-		if _, err := os.Stat(wasm); !os.IsNotExist(err) {
-			example.IsWASM = true
-		}
-	}
+	examples[0].IsJS = true
 
 	return &examples, nil
 }

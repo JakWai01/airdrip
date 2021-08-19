@@ -17,16 +17,31 @@
     <script src="/wasm_exec.js"></script>
     <script>
       const go = new Go();
-      WebAssembly.instantiateStreaming(fetch("demo.wasm"), go.importObject).then((result) => go.run(result.instance); });
+      WebAssembly.instantiateStreaming(fetch("demo.wasm"), go.importObject).then((result) => go.run(result.instance))
     </script>
     {{ end }}
   </head>
   <body>
     <h1>{{ .Title }}</h1>
-    <p><a href="/">< Home</a></p>
+    <p><a href="/">Home</a></p>
 
 		     <div>
-		       {{ template "demo.html" }}
+          Browser base64 Session Description<br />
+          <textarea id="localSessionDescription" readonly="true"></textarea> <br />
+          
+          Golang base64 Session Description<br />
+          <textarea id="remoteSessionDescription"></textarea><br />
+          <button onclick="window.startSession()">Start Session</button><br />
+          
+          <br />
+          
+          Message<br />
+          <textarea id="message">This is my DataChannel message!</textarea> <br/>
+          <button onclick="window.sendMessage()">Send Message</button> <br />
+          
+          <br />
+          Logs<br />
+          <div id="logs"></div>
 		     </div>
   </body>
 </html>
