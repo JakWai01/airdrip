@@ -31,6 +31,7 @@ pc.oniceconnectionstatechange = e => log(pc.iceConnectionState)
 // Called on ICE candidate
 pc.onicecandidate = event => {
     if (event.candidate === null) {
+        // btoa encodes string to base-64
 	    document.getElementById('localSessionDescription').value = btoa(JSON.stringify(pc.localDescription))
     }
 }
@@ -38,6 +39,7 @@ pc.onicecandidate = event => {
 // Called when negotiation is needed
 pc.onnegotiationneeded = e => pc.createOffer().then(d => pc.setLocalDescription(d)).catch(log)
 
+// Send message 
 window.sendMessage = () => {
     let message = document.getElementById('message').value
     if (message === '') {
@@ -47,6 +49,7 @@ window.sendMessage = () => {
     sendChannel.send(message)
 }
 
+// Start connection
 window.startSession = () => {
     let sd = document.getElementById('remoteSessionDescription').value
     if (sd === '') {
@@ -54,6 +57,7 @@ window.startSession = () => {
     }
 
     try {
+        // encode to base-64 to string
 	    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(atob(sd))))
     } catch(e) {
 	    alert(e)

@@ -18,7 +18,8 @@ import (
 // Allows compressing offer/answer to bypass terminal input limits
 const compress = false
 
-// MustReadSdtin blocks until input is received from stdin
+// MustReadSdtin blocks until input is received from stdin.
+// Read candidate key
 func MustReadStdin() string {
 	r := bufio.NewReader(os.Stdin)
 
@@ -65,16 +66,19 @@ func Decode(in string, obj interface{}) {
 		panic(err)
 	}
 
+	// constant compress states if the the value was zipped before
 	if compress {
 		b = unzip(b)
 	}
 
+	// unmarshal b into the obj interface
 	err = json.Unmarshal(b, obj)
 	if err != nil {
 		panic(err)
 	}
 }
 
+// compress
 func zip(in []byte) []byte {
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
@@ -93,6 +97,7 @@ func zip(in []byte) []byte {
 	return b.Bytes()
 }
 
+// uncompress
 func unzip(in []byte) []byte {
 	var b bytes.Buffer
 	_, err := b.Write(in)

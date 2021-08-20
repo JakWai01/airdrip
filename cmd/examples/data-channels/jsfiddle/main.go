@@ -28,7 +28,7 @@ func main() {
 		handleError(err)
 	}
 
-	// Create a new channel
+	// Create a new channel (we can call the channel however we like)
 	sendChannel, err := pc.CreateDataChannel("foo", nil)
 	if err != nil {
 		handleError(err)
@@ -90,6 +90,7 @@ func main() {
 		return js.Undefined()
 	}))
 
+	// Implement startSession js function
 	js.Global().Set("startSession", js.FuncOf(func(_ js.Value, _ []js.Value) interface{} {
 		go func() {
 			el := getElementByID("remoteSessionDescription")
@@ -99,8 +100,12 @@ func main() {
 				return
 			}
 
+			// Session description interface
 			descr := webrtc.SessionDescription{}
+			// Store sd in descr
 			signal.Decode(sd, &descr)
+
+			// set the description of the other peer
 			if err := pc.SetRemoteDescription(descr); err != nil {
 				handleError(err)
 			}
@@ -111,6 +116,7 @@ func main() {
 	select {}
 }
 
+// log messages to DOM
 func log(msg string) {
 	el := getElementByID("logs")
 	el.Set("innerHTML", el.Get("innerHTML").String()+msg+"<br>")
@@ -121,6 +127,7 @@ func handleError(err error) {
 	panic(err)
 }
 
+// implement getElementById
 func getElementByID(id string) js.Value {
 	return js.Global().Get("document").Call("getElementById", id)
 }

@@ -73,7 +73,9 @@ func main() {
 	})
 
 	// Wait for the offer to be pasted
+	// oofer is an interface
 	offer := webrtc.SessionDescription{}
+	// Wait for the generated candidate key to be posted. Decode stores the content in offer
 	signal.Decode(signal.MustReadStdin(), &offer)
 
 	// Set remote SessionDescription
