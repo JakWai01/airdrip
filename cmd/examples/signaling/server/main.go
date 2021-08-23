@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"strings"
 )
 
 // This signaling protocol is heavily inspired by the weron project created by @pojntfx
@@ -70,20 +71,40 @@ func handleConnection(c net.Conn) {
 			panic(err)
 		}
 
-		// a map container to decode the JSON structure into
 		values := make(map[string]json.RawMessage)
 
-		// unmarshal JSON
 		err = json.Unmarshal([]byte(message), &values)
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Printf("%v", values["hallo"])
-		fmt.Println()
+		switch Opcode(strings.ReplaceAll(string(values["opcode"]), "\"", "")) {
+		case application:
+			fmt.Println("application")
+		case acceptance:
+			fmt.Println("acceptance")
+		case rejection:
+			fmt.Println("rejection")
+		case ready:
+			fmt.Println("ready")
+		case introduction:
+			fmt.Println("introduction")
+		case offer:
+			fmt.Println("offer")
+		case answer:
+			fmt.Println("answer")
+		case candidate:
+			fmt.Println("candidate")
+		case exited:
+			fmt.Println("exited")
+		case resignation:
+			fmt.Println("resignation")
+		default:
+			panic("Invalid message. Please use a valid opcode.")
+		}
 
-		result := message + "\n"
-		c.Write([]byte(string(result)))
+		// result := message + "\n"
+		// c.Write([]byte(string(result)))
 	}
 }
 
