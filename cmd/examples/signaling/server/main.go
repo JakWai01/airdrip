@@ -2,16 +2,32 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net"
-	"strings"
 )
 
 // This signaling protocol is heavily inspired by the weron project created by @pojntfx
 // Take a look at the specification by clicking the following link: https://github.com/pojntfx/weron/blob/main/docs/signaling-protocol.txt#L12
 
+type Opcode string
+
+const (
+	application  Opcode = "application"
+	acceptance   Opcode = "acceptance"
+	rejection    Opcode = "rejection"
+	ready        Opcode = "ready"
+	introduction Opcode = "introduction"
+	offer        Opcode = "offer"
+	answer       Opcode = "answer"
+	candidate    Opcode = "candidate"
+	exited       Opcode = "exited"
+	resignation  Opcode = "resignation"
+)
+
 type Application struct {
+	opcode    string
 	community string
 	mac       string
 }
@@ -54,10 +70,19 @@ func handleConnection(c net.Conn) {
 			panic(err)
 		}
 
-		temp := strings.TrimSpace(string(message))
-		fmt.Println(temp)
+		// a map container to decode the JSON structure into
+		values := make(map[string]json.RawMessage)
 
-		result := temp + "\n"
+		// unmarshal JSON
+		err = json.Unmarshal([]byte(message), &values)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("%v", values["hallo"])
+		fmt.Println()
+
+		result := message + "\n"
 		c.Write([]byte(string(result)))
 	}
 }
