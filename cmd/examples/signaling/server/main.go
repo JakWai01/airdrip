@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"net"
+	"strings"
 )
 
 // This signaling protocol is heavily inspired by the weron project created by @pojntfx
@@ -44,9 +47,39 @@ type Resignation struct {
 	mac string
 }
 
+func handleConnection(c net.Conn) {
+	for {
+		message, err := bufio.NewReader(c).ReadString('\n')
+		if err != nil {
+			panic(err)
+		}
+
+		temp := strings.TrimSpace(string(message))
+		fmt.Println(temp)
+
+		result := temp + "\n"
+		c.Write([]byte(string(result)))
+	}
+}
+
 func main() {
 	var laddr = flag.String("laddr", "localhost:8080", "listen address")
 	flag.Parse()
 
 	fmt.Println(*laddr)
+
+	l, err := net.Listen("tcp4", *laddr)
+	if err != nil {
+		panic(err)
+	}
+
+	defer l.Close()
+
+	for {
+		c, err := l.Accept()
+		if err != nil {
+			panic(err)
+		}
+		go handleConnection(c)
+	}
 }
