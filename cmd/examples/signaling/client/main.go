@@ -19,7 +19,6 @@ func main() {
 	}
 
 	userInput := bufio.NewReader(os.Stdin)
-	response := bufio.NewReader(conn)
 	for {
 		userLine, err := userInput.ReadBytes(byte('\n'))
 		switch err {
@@ -31,15 +30,13 @@ func main() {
 			panic(err)
 		}
 
-		serverLine, err := response.ReadBytes(byte('\n'))
-		switch err {
-		case nil:
-			fmt.Println(string(serverLine))
-		case io.EOF:
-			os.Exit(0)
-		default:
+		var input [2048]byte
+
+		o, err := conn.Read(input[0:])
+		if err != nil {
 			panic(err)
 		}
 
+		fmt.Println(string(input[0:o]))
 	}
 }

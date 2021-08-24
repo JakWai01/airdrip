@@ -12,6 +12,9 @@ import (
 // This signaling protocol is heavily inspired by the weron project created by @pojntfx
 // Take a look at the specification by clicking the following link: https://github.com/pojntfx/weron/blob/main/docs/signaling-protocol.txt#L12
 
+var communities = map[string][]string{}
+var macs = []string{}
+
 type Opcode string
 
 const (
@@ -33,35 +36,48 @@ type Application struct {
 	Mac       string `json:"mac"`
 }
 
-type Acceptance struct{}
+type Acceptance struct {
+	Opcode string `json:"opcode"`
+}
 
-type Rejection struct{}
+type Rejection struct {
+	Opcode string `json:"opcode"`
+}
 
-type Ready struct{}
+type Ready struct {
+	Opcode string `json:"opcode"`
+}
 
 type Introduction struct {
-	Mac string `json:"mac"`
+	Opcode string `json:"opcode"`
+	Mac    string `json:"mac"`
 }
 
 type Offer struct {
+	Opcode  string `json:"opcode"`
 	Mac     string `json:"mac"`
 	Payload string `json:"payload"`
 }
 
 type Answer struct {
+	Opcode  string `json:"opcode"`
 	Mac     string `json:"mac"`
 	Payload string `json:"payload"`
 }
 
 type Candidate struct {
+	Opcode  string `json:"opcode"`
 	Mac     string `json:"mac"`
 	Payload string `json:"payload"`
 }
 
-type Exited struct{}
+type Exited struct {
+	Opcode string `json:"opcode"`
+}
 
 type Resignation struct {
-	Mac string `json:"mac"`
+	Opcode string `json:"opcode"`
+	Mac    string `json:"mac"`
 }
 
 func handleConnection(c net.Conn) {
@@ -80,6 +96,9 @@ func handleConnection(c net.Conn) {
 
 		switch Opcode(strings.ReplaceAll(string(values["opcode"]), "\"", "")) {
 		case application:
+			// we get community and mac. Check if community exists. If not create it. Only allow unused macs.
+
+			// Community maps string to tuple. Macs is an array and must be unique.
 			fmt.Println("application")
 			var opcode Application
 
@@ -88,12 +107,79 @@ func handleConnection(c net.Conn) {
 				panic(err)
 			}
 
-			// byteArray, err := json.MarshalIndent(opcode, "", "  ")
-			// if err != nil {
-			// 	panic(err)
-			// }
+			// check if community exists and if there are less than 2 members inside
+			if val, ok := communities[opcode.Community]; ok {
+				// check if length smaller than 2
+				if len(val) >= 2 {
+					// send Rejection. This community is full
+					byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
+					if err != nil {
+						panic(err)
+					}
 
-			// fmt.Println(string(byteArray))
+					fmt.Println(string(byteArray))
+
+					_, err = c.Write(byteArray)
+					if err != nil {
+						panic(err)
+					}
+					return
+				}
+			} else {
+				// Community does not exist. Create community and insert mac
+				communities[opcode.Community] = append(communities[opcode.Community], opcode.Mac)
+				fmt.Println(communities)
+
+				macs = append(macs, opcode.Mac)
+				fmt.Println(macs)
+
+				// send Acceptance
+				byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
+				if err != nil {
+					panic(err)
+				}
+
+				fmt.Println(string(byteArray))
+
+				_, err = c.Write(byteArray)
+				if err != nil {
+					panic(err)
+				}
+				return
+			}
+
+			for i := 0; i < len(macs); i++ {
+				if macs[i] == opcode.Mac {
+					// send Rejection. That Mac is already contained
+					byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
+					if err != nil {
+						panic(err)
+					}
+
+					fmt.Println(string(byteArray))
+
+					_, err = c.Write(byteArray)
+					if err != nil {
+						panic(err)
+					}
+					return
+				}
+			}
+
+			// send Acceptance
+			byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(string(byteArray))
+
+			_, err = c.Write(byteArray)
+			if err != nil {
+				panic(err)
+			}
+			return
+
 		case ready:
 			fmt.Println("ready")
 			var opcode Ready
