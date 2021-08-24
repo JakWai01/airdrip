@@ -40,28 +40,28 @@ type Rejection struct{}
 type Ready struct{}
 
 type Introduction struct {
-	mac string
+	Mac string `json:"mac"`
 }
 
 type Offer struct {
-	mac     string
-	payload string
+	Mac     string `json:"mac"`
+	Payload string `json:"payload"`
 }
 
 type Answer struct {
-	mac     string
-	payload string
+	Mac     string `json:"mac"`
+	Payload string `json:"payload"`
 }
 
 type Candidate struct {
-	mac     string
-	payload string
+	Mac     string `json:"mac"`
+	Payload string `json:"payload"`
 }
 
 type Exited struct{}
 
 type Resignation struct {
-	mac string
+	Mac string `json:"mac"`
 }
 
 func handleConnection(c net.Conn) {
@@ -88,31 +88,85 @@ func handleConnection(c net.Conn) {
 				panic(err)
 			}
 
-			byteArray, err := json.MarshalIndent(opcode, "", "  ")
-			if err != nil {
-				panic(err)
-			}
+			// byteArray, err := json.MarshalIndent(opcode, "", "  ")
+			// if err != nil {
+			// 	panic(err)
+			// }
 
-			fmt.Println(string(byteArray))
+			// fmt.Println(string(byteArray))
 
 		case acceptance:
 			fmt.Println("acceptance")
+			var opcode Acceptance
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
 		case rejection:
 			fmt.Println("rejection")
+			var opcode Rejection
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
 		case ready:
 			fmt.Println("ready")
+			var opcode Ready
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
 		case introduction:
 			fmt.Println("introduction")
+			var opcode Introduction
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
 		case offer:
 			fmt.Println("offer")
+			var opcode Offer
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
 		case answer:
 			fmt.Println("answer")
+			var opcode Answer
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
 		case candidate:
 			fmt.Println("candidate")
+			var opcode Candidate
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
 		case exited:
 			fmt.Println("exited")
+			var opcode Exited
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
 		case resignation:
 			fmt.Println("resignation")
+			var opcode Resignation
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
 		default:
 			panic("Invalid message. Please use a valid opcode.")
 		}
