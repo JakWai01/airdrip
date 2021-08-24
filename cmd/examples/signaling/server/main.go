@@ -28,9 +28,9 @@ const (
 )
 
 type Application struct {
-	opcode    string
-	community string
-	mac       string
+	Opcode    string `json:"opcode"`
+	Community string `json:"community"`
+	Mac       string `json:"mac"`
 }
 
 type Acceptance struct{}
@@ -81,6 +81,20 @@ func handleConnection(c net.Conn) {
 		switch Opcode(strings.ReplaceAll(string(values["opcode"]), "\"", "")) {
 		case application:
 			fmt.Println("application")
+			var opcode Application
+
+			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
+
+			byteArray, err := json.MarshalIndent(opcode, "", "  ")
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(string(byteArray))
+
 		case acceptance:
 			fmt.Println("acceptance")
 		case rejection:
@@ -102,9 +116,6 @@ func handleConnection(c net.Conn) {
 		default:
 			panic("Invalid message. Please use a valid opcode.")
 		}
-
-		// result := message + "\n"
-		// c.Write([]byte(string(result)))
 	}
 }
 
