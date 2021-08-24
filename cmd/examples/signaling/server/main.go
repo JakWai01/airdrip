@@ -94,34 +94,9 @@ func handleConnection(c net.Conn) {
 			// }
 
 			// fmt.Println(string(byteArray))
-
-		case acceptance:
-			fmt.Println("acceptance")
-			var opcode Acceptance
-
-			err := json.Unmarshal([]byte(message), &opcode)
-			if err != nil {
-				panic(err)
-			}
-		case rejection:
-			fmt.Println("rejection")
-			var opcode Rejection
-
-			err := json.Unmarshal([]byte(message), &opcode)
-			if err != nil {
-				panic(err)
-			}
 		case ready:
 			fmt.Println("ready")
 			var opcode Ready
-
-			err := json.Unmarshal([]byte(message), &opcode)
-			if err != nil {
-				panic(err)
-			}
-		case introduction:
-			fmt.Println("introduction")
-			var opcode Introduction
 
 			err := json.Unmarshal([]byte(message), &opcode)
 			if err != nil {
@@ -154,14 +129,6 @@ func handleConnection(c net.Conn) {
 		case exited:
 			fmt.Println("exited")
 			var opcode Exited
-
-			err := json.Unmarshal([]byte(message), &opcode)
-			if err != nil {
-				panic(err)
-			}
-		case resignation:
-			fmt.Println("resignation")
-			var opcode Resignation
 
 			err := json.Unmarshal([]byte(message), &opcode)
 			if err != nil {
