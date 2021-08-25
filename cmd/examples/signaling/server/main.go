@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -13,7 +14,7 @@ import (
 // Take a look at the specification by clicking the following link: https://github.com/pojntfx/weron/blob/main/docs/signaling-protocol.txt#L12
 
 var communities = map[string][]string{}
-var macs = []string{}
+var macs = map[string]bool{}
 
 type Opcode string
 
@@ -46,6 +47,7 @@ type Rejection struct {
 
 type Ready struct {
 	Opcode string `json:"opcode"`
+	Mac    string `json:"mac"`
 }
 
 type Introduction struct {
@@ -82,6 +84,7 @@ type Resignation struct {
 
 func handleConnection(c net.Conn) {
 	for {
+
 		message, err := bufio.NewReader(c).ReadString('\n')
 		if err != nil {
 			panic(err)
@@ -130,7 +133,7 @@ func handleConnection(c net.Conn) {
 				communities[opcode.Community] = append(communities[opcode.Community], opcode.Mac)
 				fmt.Println(communities)
 
-				macs = append(macs, opcode.Mac)
+				macs[opcode.Opcode] = false
 				fmt.Println(macs)
 
 				// send Acceptance
@@ -148,22 +151,20 @@ func handleConnection(c net.Conn) {
 				return
 			}
 
-			for i := 0; i < len(macs); i++ {
-				if macs[i] == opcode.Mac {
-					// send Rejection. That Mac is already contained
-					byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
-					if err != nil {
-						panic(err)
-					}
-
-					fmt.Println(string(byteArray))
-
-					_, err = c.Write(byteArray)
-					if err != nil {
-						panic(err)
-					}
-					return
+			if _, ok := macs[opcode.Mac]; ok {
+				// send Rejection. That Mac is already contained
+				byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
+				if err != nil {
+					panic(err)
 				}
+
+				fmt.Println(string(byteArray))
+
+				_, err = c.Write(byteArray)
+				if err != nil {
+					panic(err)
+				}
+				return
 			}
 
 			// send Acceptance
@@ -188,6 +189,25 @@ func handleConnection(c net.Conn) {
 			if err != nil {
 				panic(err)
 			}
+
+			// If we receive ready, mark the sending person as ready and check if both are ready. Loop through all communities to get the community the person is in.
+			macs[opcode.Mac] = true
+
+			// Loop through all members of the community and through all elements in it
+			community, err := getCommunity(opcode.Mac)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(community)
+
+			if len(communities[community]) == 2 {
+				if macs[communities[community][0]] == true && macs[communities[community][1]] == true {
+					// Both are ready, send introduction
+					// Which one sends? Which one receives?
+				}
+			}
+
 		case offer:
 			fmt.Println("offer")
 			var opcode Offer
@@ -246,4 +266,15 @@ func main() {
 		}
 		go handleConnection(c)
 	}
+}
+
+func getCommunity(mac string) (string, error) {
+	for key, element := range communities {
+		for i := 0; i < len(element); i++ {
+			if element[i] == mac {
+				return key, nil
+			}
+		}
+	}
+	return "", errors.New("This mac is not part of any community so far!")
 }
