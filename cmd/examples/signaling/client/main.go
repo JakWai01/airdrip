@@ -9,6 +9,7 @@ import (
 	"os"
 )
 
+// don't use this
 func main() {
 	var laddr = flag.String("laddr", "localhost:8080", "listen address")
 	flag.Parse()

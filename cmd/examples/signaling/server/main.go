@@ -110,12 +110,49 @@ func handleConnection(c net.Conn) {
 				panic(err)
 			}
 
+			if _, ok := macs[opcode.Mac]; ok {
+				// send Rejection. That Mac is already contained
+				byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
+				if err != nil {
+					panic(err)
+				}
+
+				fmt.Println(string(byteArray))
+
+				_, err = c.Write(byteArray)
+				if err != nil {
+					panic(err)
+				}
+				return
+			}
+
 			// check if community exists and if there are less than 2 members inside
 			if val, ok := communities[opcode.Community]; ok {
 				// check if length smaller than 2
 				if len(val) >= 2 {
 					// send Rejection. This community is full
 					byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
+					if err != nil {
+						panic(err)
+					}
+
+					fmt.Println(string(byteArray))
+
+					_, err = c.Write(byteArray)
+					if err != nil {
+						panic(err)
+					}
+					return
+				} else {
+					// Community exists but has less than 2 values in it
+					communities[opcode.Community] = append(communities[opcode.Community], opcode.Mac)
+					fmt.Println(communities)
+
+					macs[opcode.Opcode] = false
+					fmt.Println(macs)
+
+					// send Acceptance
+					byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
 					if err != nil {
 						panic(err)
 					}
@@ -151,36 +188,6 @@ func handleConnection(c net.Conn) {
 				return
 			}
 
-			if _, ok := macs[opcode.Mac]; ok {
-				// send Rejection. That Mac is already contained
-				byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
-				if err != nil {
-					panic(err)
-				}
-
-				fmt.Println(string(byteArray))
-
-				_, err = c.Write(byteArray)
-				if err != nil {
-					panic(err)
-				}
-				return
-			}
-
-			// send Acceptance
-			byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(string(byteArray))
-
-			_, err = c.Write(byteArray)
-			if err != nil {
-				panic(err)
-			}
-			return
-
 		case ready:
 			fmt.Println("ready")
 			var opcode Ready
@@ -202,11 +209,15 @@ func handleConnection(c net.Conn) {
 			fmt.Println(community)
 
 			if len(communities[community]) == 2 {
+				// 2 members
 				if macs[communities[community][0]] == true && macs[communities[community][1]] == true {
 					// Both are ready, send introduction
 					// Which one sends? Which one receives?
+					fmt.Println("Both peers are ready")
 				}
 			}
+
+			return
 
 		case offer:
 			fmt.Println("offer")
