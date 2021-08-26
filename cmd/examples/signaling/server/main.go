@@ -189,7 +189,6 @@ func handleConnection(c net.Conn) {
 			}
 
 		case ready:
-			fmt.Println("ready")
 			var opcode Ready
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -200,20 +199,28 @@ func handleConnection(c net.Conn) {
 			// If we receive ready, mark the sending person as ready and check if both are ready. Loop through all communities to get the community the person is in.
 			macs[opcode.Mac] = true
 
-			// Loop through all members of the community and through all elements in it
+			// Loop through all members of the community and through all elements in it. If the mac isn't member of a community, this will panic.
 			community, err := getCommunity(opcode.Mac)
 			if err != nil {
 				panic(err)
 			}
 
-			fmt.Println(community)
-
 			if len(communities[community]) == 2 {
-				// 2 members
 				if macs[communities[community][0]] == true && macs[communities[community][1]] == true {
-					// Both are ready, send introduction
-					// Which one sends? Which one receives?
-					fmt.Println("Both peers are ready")
+					// Send an introduction to the peer containing the address of the first peer.
+					byteArray, err := json.Marshal(Introduction{Opcode: string(introduction), Mac: communities[community][0]})
+					if err != nil {
+						panic(err)
+					}
+
+					fmt.Println(string(byteArray))
+
+					_, err = c.Write(byteArray)
+					if err != nil {
+						panic(err)
+					}
+					return
+
 				}
 			}
 
