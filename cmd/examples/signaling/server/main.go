@@ -91,6 +91,8 @@ func handleConnection(c net.Conn) {
 			panic(err)
 		}
 
+		fmt.Println(message)
+
 		values := make(map[string]json.RawMessage)
 
 		err = json.Unmarshal([]byte(message), &values)
@@ -124,7 +126,7 @@ func handleConnection(c net.Conn) {
 				if err != nil {
 					panic(err)
 				}
-				return
+				break
 			}
 
 			// Store connection in a map
@@ -147,7 +149,7 @@ func handleConnection(c net.Conn) {
 					if err != nil {
 						panic(err)
 					}
-					return
+					break
 				} else {
 					// Community exists but has less than 2 values in it
 					communities[opcode.Community] = append(communities[opcode.Community], opcode.Mac)
@@ -168,7 +170,7 @@ func handleConnection(c net.Conn) {
 					if err != nil {
 						panic(err)
 					}
-					return
+					break
 				}
 			} else {
 				// Community does not exist. Create community and insert mac
@@ -190,7 +192,7 @@ func handleConnection(c net.Conn) {
 				if err != nil {
 					panic(err)
 				}
-				return
+				break
 			}
 
 		case ready:
@@ -224,12 +226,12 @@ func handleConnection(c net.Conn) {
 					if err != nil {
 						panic(err)
 					}
-					return
+					break
 
 				}
 			}
 
-			return
+			break
 
 		case offer:
 			// Contains the mac of the receiver and a payload this receiver should receive
@@ -263,7 +265,7 @@ func handleConnection(c net.Conn) {
 			if err != nil {
 				panic(err)
 			}
-			return
+			break
 		case answer:
 			fmt.Println("answer")
 			var opcode Answer
