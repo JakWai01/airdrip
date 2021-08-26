@@ -15,6 +15,7 @@ import (
 
 var communities = map[string][]string{}
 var macs = map[string]bool{}
+var connections = map[string]net.Conn{}
 
 type Opcode string
 
@@ -126,6 +127,10 @@ func handleConnection(c net.Conn) {
 				return
 			}
 
+			// Store connection in a map
+			connections[opcode.Mac] = c
+			fmt.Println(connections)
+
 			// check if community exists and if there are less than 2 members inside
 			if val, ok := communities[opcode.Community]; ok {
 				// check if length smaller than 2
@@ -227,6 +232,7 @@ func handleConnection(c net.Conn) {
 			return
 
 		case offer:
+			// Contains the mac of the receiver and a payload this receiver should receive
 			fmt.Println("offer")
 			var opcode Offer
 
@@ -234,11 +240,58 @@ func handleConnection(c net.Conn) {
 			if err != nil {
 				panic(err)
 			}
+
+			// Get connection of the reveiver and send him the payload
+			receiver := connections[opcode.Mac]
+
+			var senderMac string
+			// Get the Mac based on the current connection out of the connections mac
+			for key, val := range connections {
+				if c == val {
+					senderMac = key
+				}
+			}
+
+			byteArray, err := json.Marshal(Offer{Opcode: string(offer), Mac: senderMac, Payload: opcode.Payload})
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(string(byteArray))
+
+			_, err = receiver.Write(byteArray)
+			if err != nil {
+				panic(err)
+			}
+			return
 		case answer:
 			fmt.Println("answer")
 			var opcode Answer
 
 			err := json.Unmarshal([]byte(message), &opcode)
+			if err != nil {
+				panic(err)
+			}
+
+			// Get connection of the receiver and send him the payload
+			receiver := connections[opcode.Mac]
+
+			var senderMac string
+			// Get the Mac based on the current connection out of the connections mac
+			for key, val := range connections {
+				if c == val {
+					senderMac = key
+				}
+			}
+
+			byteArray, err := json.Marshal(Answer{Opcode: string(answer), Mac: senderMac, Payload: opcode.Payload})
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(string(byteArray))
+
+			_, err = receiver.Write(byteArray)
 			if err != nil {
 				panic(err)
 			}
@@ -250,6 +303,29 @@ func handleConnection(c net.Conn) {
 			if err != nil {
 				panic(err)
 			}
+
+			// Get connection of the receiver and send him the payload
+			receiver := connections[opcode.Mac]
+
+			var senderMac string
+			// Get the Mac based on the current connection out of the connections mac
+			for key, val := range connections {
+				if c == val {
+					senderMac = key
+				}
+			}
+
+			byteArray, err := json.Marshal(Candidate{Opcode: string(candidate), Mac: senderMac, Payload: opcode.Payload})
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(string(byteArray))
+
+			_, err = receiver.Write(byteArray)
+			if err != nil {
+				panic(err)
+			}
 		case exited:
 			fmt.Println("exited")
 			var opcode Exited
@@ -258,6 +334,50 @@ func handleConnection(c net.Conn) {
 			if err != nil {
 				panic(err)
 			}
+
+			var senderMac string
+			// Get the Mac based on the current connection out of the connections mac
+			for key, val := range connections {
+				if c == val {
+					senderMac = key
+				}
+			}
+
+			byteArray, err := json.Marshal(Resignation{Opcode: string(resignation), Mac: senderMac})
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(string(byteArray))
+
+			var receiver net.Conn
+
+			// Get the other peer in the community
+			community, err := getCommunity(senderMac)
+			if err != nil {
+				panic(err)
+			}
+
+			if senderMac == communities[community][0] {
+				// the second one is receiver
+				receiver = connections[communities[community][1]]
+			} else {
+				// first one
+				receiver = connections[communities[community][0]]
+			}
+
+			// Send to the other peer
+			_, err = receiver.Write(byteArray)
+			if err != nil {
+				panic(err)
+			}
+
+			// Remove this peer from all maps
+			delete(macs, senderMac)
+			delete(connections, senderMac)
+
+			// Remove community
+			delete(communities, community)
 		default:
 			panic("Invalid message. Please use a valid opcode.")
 		}
