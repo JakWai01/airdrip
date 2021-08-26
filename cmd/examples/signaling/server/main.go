@@ -155,7 +155,7 @@ func handleConnection(c net.Conn) {
 					communities[opcode.Community] = append(communities[opcode.Community], opcode.Mac)
 					fmt.Println(communities)
 
-					macs[opcode.Opcode] = false
+					macs[opcode.Mac] = false
 					fmt.Println(macs)
 
 					// send Acceptance
@@ -177,7 +177,7 @@ func handleConnection(c net.Conn) {
 				communities[opcode.Community] = append(communities[opcode.Community], opcode.Mac)
 				fmt.Println(communities)
 
-				macs[opcode.Opcode] = false
+				macs[opcode.Mac] = false
 				fmt.Println(macs)
 
 				// send Acceptance
