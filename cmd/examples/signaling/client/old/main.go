@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"net"
+	"os"
 )
 
 func main() {
@@ -15,8 +18,17 @@ func main() {
 		panic(err)
 	}
 
+	userInput := bufio.NewReader(os.Stdin)
 	for {
-		conn.Write([]byte(`{"opcode":"application", "community":"a", "mac":"123"}`))
+		userLine, err := userInput.ReadBytes(byte('\n'))
+		switch err {
+		case nil:
+			conn.Write(userLine)
+		case io.EOF:
+			os.Exit(0)
+		default:
+			panic(err)
+		}
 
 		var input [2048]byte
 
