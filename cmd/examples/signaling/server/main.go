@@ -85,7 +85,7 @@ type Resignation struct {
 
 func handleConnection(c net.Conn) {
 	for {
-
+		// error here
 		message, err := bufio.NewReader(c).ReadString('\n')
 		if err != nil {
 			panic(err)
@@ -397,7 +397,7 @@ func main() {
 		panic(err)
 	}
 
-	defer l.Close()
+	// defer l.Close()
 
 	for {
 		c, err := l.Accept()
