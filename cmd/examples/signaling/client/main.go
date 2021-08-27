@@ -18,8 +18,11 @@ type Ready struct {
 	Mac    string `json:"mac"`
 }
 
+// take flags for community and mac
 func main() {
 	var laddr = flag.String("laddr", "localhost:8080", "listen address")
+	var mac = flag.String("mac", "123", "mac (identification string)")
+	var community = flag.String("community", "a", "community to join")
 	flag.Parse()
 
 	conn, err := net.Dial("tcp", *laddr)
@@ -27,8 +30,7 @@ func main() {
 		panic(err)
 	}
 
-	application := Application{Opcode: "application", Community: "a", Mac: "123"}
-	// _, err = conn.Write([]byte(`{"opcode":"application", "community":"a", "mac":"123"}` + "\n"))
+	application := Application{Opcode: "application", Community: *community, Mac: *mac}
 
 	byteArray, err := json.Marshal(application)
 	if err != nil {
@@ -51,7 +53,7 @@ func main() {
 	fmt.Println()
 	fmt.Println(string(input[0:o]))
 
-	ready := Ready{Opcode: "ready", Mac: "123"}
+	ready := Ready{Opcode: "ready", Mac: *mac}
 
 	byteArray, err = json.Marshal(ready)
 	if err != nil {
