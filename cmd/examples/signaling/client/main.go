@@ -13,6 +13,11 @@ type Application struct {
 	Mac       string `json:"mac"`
 }
 
+type Ready struct {
+	Opcode string `json:"opcode"`
+	Mac    string `json:"mac"`
+}
+
 func main() {
 	var laddr = flag.String("laddr", "localhost:8080", "listen address")
 	flag.Parse()
@@ -45,4 +50,27 @@ func main() {
 
 	fmt.Println()
 	fmt.Println(string(input[0:o]))
+
+	ready := Ready{Opcode: "ready", Mac: "123"}
+
+	byteArray, err = json.Marshal(ready)
+	if err != nil {
+		panic(err)
+	}
+
+	byteArray = append(byteArray, "\n"...)
+	_, err = conn.Write([]byte(byteArray))
+	if err != nil {
+		panic(err)
+	}
+
+	o, err = conn.Read(input[0:])
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println()
+	fmt.Println(string(input[0:o]))
+
+	select {}
 }
