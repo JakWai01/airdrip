@@ -61,6 +61,8 @@ type Candidate struct {
 	Payload string `json:"payload"`
 }
 
+var candidateCache []string
+
 // take flags for community and mac
 func main() {
 	var laddr = flag.String("laddr", "localhost:8080", "listen address")
@@ -110,15 +112,12 @@ func main() {
 
 		switch Opcode(strings.ReplaceAll(string(values["opcode"]), "\"", "")) {
 		case acceptance:
-			fmt.Println("acceptance")
 
 			// We actually don't need to unmarshal here because acceptance only contains an opcode
 			byteArray, err := json.Marshal(Ready{Opcode: string(ready), Mac: *mac})
 			if err != nil {
 				panic(err)
 			}
-
-			fmt.Println(string(byteArray))
 
 			byteArray = append(byteArray, "\n"...)
 			_, err = conn.Write([]byte(byteArray))
@@ -128,7 +127,6 @@ func main() {
 
 			break
 		case introduction:
-			fmt.Println("introduction")
 
 			// We get the mac of our partner and store it
 			var opcode Introduction
@@ -146,8 +144,6 @@ func main() {
 				panic(err)
 			}
 
-			fmt.Println(string(byteArray))
-
 			byteArray = append(byteArray, "\n"...)
 			_, err = conn.Write([]byte(byteArray))
 			if err != nil {
@@ -156,7 +152,6 @@ func main() {
 
 			break
 		case offer:
-			fmt.Println("offer")
 
 			var opcode Offer
 
@@ -173,8 +168,6 @@ func main() {
 				panic(err)
 			}
 
-			fmt.Println(string(byteArray))
-
 			byteArray = append(byteArray, "\n"...)
 			_, err = conn.Write([]byte(byteArray))
 			if err != nil {
@@ -183,8 +176,6 @@ func main() {
 
 			break
 		case answer:
-			fmt.Println("answer")
-
 			var opcode Answer
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -200,8 +191,6 @@ func main() {
 				panic(err)
 			}
 
-			fmt.Println(string(byteArray))
-
 			byteArray = append(byteArray, "\n"...)
 			_, err = conn.Write([]byte(byteArray))
 			if err != nil {
@@ -210,8 +199,6 @@ func main() {
 
 			break
 		case candidate:
-			fmt.Println("candidate")
-
 			var opcode Candidate
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -227,12 +214,18 @@ func main() {
 				panic(err)
 			}
 
-			fmt.Println(string(byteArray))
-
 			byteArray = append(byteArray, "\n"...)
-			_, err = conn.Write([]byte(byteArray))
-			if err != nil {
-				panic(err)
+
+			// only write if we haven't written yet
+			if contains(candidateCache, opcode.Mac) {
+				break
+			} else {
+				candidateCache = append(candidateCache, opcode.Mac)
+
+				_, err = conn.Write([]byte(byteArray))
+				if err != nil {
+					panic(err)
+				}
 			}
 
 			// check for candidates
@@ -267,4 +260,14 @@ func main() {
 
 	// Offer
 	// offer := Offer{Opcode: "offer", Mac: , Payload: "Hallo Welt"}
+}
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }
