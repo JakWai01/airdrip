@@ -61,8 +61,6 @@ type Candidate struct {
 	Payload string `json:"payload"`
 }
 
-var candidateCache []string
-
 // take flags for community and mac
 func main() {
 	var laddr = flag.String("laddr", "localhost:8080", "listen address")
@@ -216,16 +214,9 @@ func main() {
 
 			byteArray = append(byteArray, "\n"...)
 
-			// only write if we haven't written yet
-			if contains(candidateCache, opcode.Mac) {
-				break
-			} else {
-				candidateCache = append(candidateCache, opcode.Mac)
-
-				_, err = conn.Write([]byte(byteArray))
-				if err != nil {
-					panic(err)
-				}
+			_, err = conn.Write([]byte(byteArray))
+			if err != nil {
+				panic(err)
 			}
 
 			// check for candidates

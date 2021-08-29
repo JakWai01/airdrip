@@ -16,6 +16,7 @@ import (
 var communities = map[string][]string{}
 var macs = map[string]bool{}
 var connections = map[string]net.Conn{}
+var candidateCache []string
 
 type Opcode string
 
@@ -324,10 +325,18 @@ func handleConnection(c net.Conn) {
 
 			fmt.Println(string(byteArray))
 
-			_, err = receiver.Write(byteArray)
-			if err != nil {
-				panic(err)
+			// only write if we haven't written yet
+			if contains(candidateCache, opcode.Mac) {
+				break
+			} else {
+				candidateCache = append(candidateCache, opcode.Mac)
+
+				_, err = receiver.Write(byteArray)
+				if err != nil {
+					panic(err)
+				}
 			}
+
 		case exited:
 			fmt.Println("exited")
 			var opcode Exited
@@ -417,4 +426,14 @@ func getCommunity(mac string) (string, error) {
 		}
 	}
 	return "", errors.New("This mac is not part of any community so far!")
+}
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }
