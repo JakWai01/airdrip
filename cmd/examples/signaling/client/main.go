@@ -5,7 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 )
 
 type Opcode string
@@ -61,8 +64,13 @@ type Candidate struct {
 	Payload string `json:"payload"`
 }
 
+type Exited struct {
+	Opcode string `json:"opcode"`
+}
+
 // take flags for community and mac
 func main() {
+
 	var laddr = flag.String("laddr", "localhost:8080", "listen address")
 	var mac = flag.String("mac", "123", "mac (identification string)")
 	var community = flag.String("community", "a", "community to join")
@@ -87,6 +95,27 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+
+		// send candidate back
+		byteArray, err := json.Marshal(Exited{Opcode: string(exited)})
+		if err != nil {
+			panic(err)
+		}
+
+		byteArray = append(byteArray, "\n"...)
+
+		_, err = conn.Write([]byte(byteArray))
+		if err != nil {
+			panic(err)
+		}
+
+		os.Exit(1)
+	}()
 
 	// enter loop here
 	for {
@@ -221,6 +250,8 @@ func main() {
 
 			// check for candidates
 			break
+		case resignation:
+			fmt.Println("resignation received")
 		}
 
 	}

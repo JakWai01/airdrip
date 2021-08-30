@@ -298,6 +298,8 @@ func handleConnection(c net.Conn) {
 			if err != nil {
 				panic(err)
 			}
+
+			break
 		case candidate:
 			fmt.Println("candidate")
 			var opcode Candidate
@@ -336,6 +338,8 @@ func handleConnection(c net.Conn) {
 					panic(err)
 				}
 			}
+
+			break
 
 		case exited:
 			fmt.Println("exited")
@@ -389,6 +393,8 @@ func handleConnection(c net.Conn) {
 
 			// Remove community
 			delete(communities, community)
+
+			break
 		default:
 			panic("Invalid message. Please use a valid opcode.")
 		}
