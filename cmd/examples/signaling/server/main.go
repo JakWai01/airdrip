@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 )
 
@@ -89,10 +90,8 @@ func handleConnection(c net.Conn) {
 		// error here
 		message, err := bufio.NewReader(c).ReadString('\n')
 		if err != nil {
-			panic(err)
+			os.Exit(0)
 		}
-
-		fmt.Println(message)
 
 		values := make(map[string]json.RawMessage)
 
@@ -106,7 +105,6 @@ func handleConnection(c net.Conn) {
 			// we get community and mac. Check if community exists. If not create it. Only allow unused macs.
 
 			// Community maps string to tuple. Macs is an array and must be unique.
-			fmt.Println("application")
 			var opcode Application
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -121,8 +119,6 @@ func handleConnection(c net.Conn) {
 					panic(err)
 				}
 
-				fmt.Println(string(byteArray))
-
 				_, err = c.Write(byteArray)
 				if err != nil {
 					panic(err)
@@ -132,7 +128,6 @@ func handleConnection(c net.Conn) {
 
 			// Store connection in a map
 			connections[opcode.Mac] = c
-			fmt.Println(connections)
 
 			// check if community exists and if there are less than 2 members inside
 			if val, ok := communities[opcode.Community]; ok {
@@ -144,8 +139,6 @@ func handleConnection(c net.Conn) {
 						panic(err)
 					}
 
-					fmt.Println(string(byteArray))
-
 					_, err = c.Write(byteArray)
 					if err != nil {
 						panic(err)
@@ -154,18 +147,14 @@ func handleConnection(c net.Conn) {
 				} else {
 					// Community exists but has less than 2 values in it
 					communities[opcode.Community] = append(communities[opcode.Community], opcode.Mac)
-					fmt.Println(communities)
 
 					macs[opcode.Mac] = false
-					fmt.Println(macs)
 
 					// send Acceptance
 					byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
 					if err != nil {
 						panic(err)
 					}
-
-					fmt.Println(string(byteArray))
 
 					_, err = c.Write(byteArray)
 					if err != nil {
@@ -176,18 +165,14 @@ func handleConnection(c net.Conn) {
 			} else {
 				// Community does not exist. Create community and insert mac
 				communities[opcode.Community] = append(communities[opcode.Community], opcode.Mac)
-				fmt.Println(communities)
 
 				macs[opcode.Mac] = false
-				fmt.Println(macs)
 
 				// send Acceptance
 				byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
 				if err != nil {
 					panic(err)
 				}
-
-				fmt.Println(string(byteArray))
 
 				_, err = c.Write(byteArray)
 				if err != nil {
@@ -221,8 +206,6 @@ func handleConnection(c net.Conn) {
 						panic(err)
 					}
 
-					fmt.Println(string(byteArray))
-
 					_, err = c.Write(byteArray)
 					if err != nil {
 						panic(err)
@@ -236,7 +219,6 @@ func handleConnection(c net.Conn) {
 
 		case offer:
 			// Contains the mac of the receiver and a payload this receiver should receive
-			fmt.Println("offer")
 			var opcode Offer
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -260,15 +242,12 @@ func handleConnection(c net.Conn) {
 				panic(err)
 			}
 
-			fmt.Println(string(byteArray))
-
 			_, err = receiver.Write(byteArray)
 			if err != nil {
 				panic(err)
 			}
 			break
 		case answer:
-			fmt.Println("answer")
 			var opcode Answer
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -292,8 +271,6 @@ func handleConnection(c net.Conn) {
 				panic(err)
 			}
 
-			fmt.Println(string(byteArray))
-
 			_, err = receiver.Write(byteArray)
 			if err != nil {
 				panic(err)
@@ -301,7 +278,6 @@ func handleConnection(c net.Conn) {
 
 			break
 		case candidate:
-			fmt.Println("candidate")
 			var opcode Candidate
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -325,8 +301,6 @@ func handleConnection(c net.Conn) {
 				panic(err)
 			}
 
-			fmt.Println(string(byteArray))
-
 			// only write if we haven't written yet
 			if contains(candidateCache, opcode.Mac) {
 				break
@@ -342,7 +316,6 @@ func handleConnection(c net.Conn) {
 			break
 
 		case exited:
-			fmt.Println("exited")
 			var opcode Exited
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -362,9 +335,6 @@ func handleConnection(c net.Conn) {
 			if err != nil {
 				panic(err)
 			}
-
-			fmt.Println(string(byteArray))
-
 			var receiver net.Conn
 
 			// Get the other peer in the community
@@ -373,11 +343,15 @@ func handleConnection(c net.Conn) {
 				panic(err)
 			}
 
-			if senderMac == communities[community][0] {
-				// the second one is receiver
-				receiver = connections[communities[community][1]]
+			if len(communities[community]) == 2 {
+				if senderMac == communities[community][0] {
+					// the second one is receiver
+					receiver = connections[communities[community][1]]
+				} else {
+					// first one
+					receiver = connections[communities[community][0]]
+				}
 			} else {
-				// first one
 				receiver = connections[communities[community][0]]
 			}
 
@@ -391,10 +365,15 @@ func handleConnection(c net.Conn) {
 			delete(macs, senderMac)
 			delete(connections, senderMac)
 
-			// Remove community
-			delete(communities, community)
+			// Remove member from community
+			communities[community] = deleteElement(communities[community], senderMac)
 
-			break
+			// Remove community only if there is only one member left
+			if len(communities[community]) == 0 {
+				delete(communities, community)
+			}
+
+			return
 		default:
 			panic("Invalid message. Please use a valid opcode.")
 		}
@@ -442,4 +421,14 @@ func contains(s []string, str string) bool {
 	}
 
 	return false
+}
+
+func deleteElement(s []string, str string) []string {
+	var elementIndex int
+	for index, element := range s {
+		if element == str {
+			elementIndex = index
+		}
+	}
+	return append(s[:elementIndex], s[elementIndex+1:]...)
 }

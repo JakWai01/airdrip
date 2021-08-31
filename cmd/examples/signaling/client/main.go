@@ -101,7 +101,7 @@ func main() {
 	go func() {
 		<-c
 
-		// send candidate back
+		// send exited
 		byteArray, err := json.Marshal(Exited{Opcode: string(exited)})
 		if err != nil {
 			panic(err)
@@ -114,7 +114,7 @@ func main() {
 			panic(err)
 		}
 
-		os.Exit(1)
+		os.Exit(0)
 	}()
 
 	// enter loop here
@@ -123,7 +123,7 @@ func main() {
 
 		o, err := conn.Read(input[0:])
 		if err != nil {
-			panic(err)
+			os.Exit(0)
 		}
 
 		message := string(input[0:o])
@@ -251,37 +251,23 @@ func main() {
 			// check for candidates
 			break
 		case resignation:
-			fmt.Println("resignation received")
+			byteArray, err := json.Marshal(Exited{Opcode: string(exited)})
+			if err != nil {
+				panic(err)
+			}
+
+			byteArray = append(byteArray, "\n"...)
+
+			_, err = conn.Write([]byte(byteArray))
+			if err != nil {
+				panic(err)
+			}
+
+			os.Exit(0)
 		}
 
 	}
 
-	// Ready
-	// ready := Ready{Opcode: "ready", Mac: *mac}
-
-	// byteArray, err = json.Marshal(ready)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// byteArray = append(byteArray, "\n"...)
-	// _, err = conn.Write([]byte(byteArray))
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// o, err = conn.Read(input[0:])
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// fmt.Println()
-	// fmt.Println(string(input[0:o]))
-
-	// Unmarshal answer to get it
-
-	// Offer
-	// offer := Offer{Opcode: "offer", Mac: , Payload: "Hallo Welt"}
 }
 
 func contains(s []string, str string) bool {
