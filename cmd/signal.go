@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -28,6 +29,7 @@ var signalCmd = &cobra.Command{
 				panic(err)
 			}
 
+			fmt.Println("signaling server listening on localhost:8080")
 			defer l.Accept()
 			signaler := signaling.NewSignalingServer()
 			for {
