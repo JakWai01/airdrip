@@ -3,7 +3,6 @@ package signaling
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -70,8 +69,6 @@ func main() {
 		}
 
 		message := string(input[0:o])
-
-		fmt.Println(message)
 
 		values := make(map[string]json.RawMessage)
 
