@@ -10,8 +10,6 @@ import (
 // This signaling protocol is heavily inspired by the weron project created by @pojntfx
 // Take a look at the specification by clicking the following link: https://github.com/pojntfx/weron/blob/main/docs/signaling-protocol.txt#L12
 
-// put models into extra file
-
 func NewSignalingServer() *SignalingServer {
 	return &SignalingServer{
 		communities:    map[string][]string{},
