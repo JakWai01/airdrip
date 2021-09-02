@@ -128,7 +128,9 @@ func main() {
 
 		message := string(input[0:o])
 
+		fmt.Println("---------")
 		fmt.Println(message)
+		fmt.Println("---------")
 
 		values := make(map[string]json.RawMessage)
 
