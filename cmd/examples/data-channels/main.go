@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"examples/signal"
+	"github.com/JakWai01/airdrip/cmd/examples/signal"
 
 	"github.com/pion/webrtc/v3"
 )
