@@ -3,6 +3,7 @@ package signaling
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
 	"strings"
 )
@@ -33,6 +34,8 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 
 				return
 			}
+
+			fmt.Println(message)
 
 			values := make(map[string]json.RawMessage)
 

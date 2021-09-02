@@ -2,7 +2,7 @@ package signaling
 
 import (
 	"encoding/json"
-	"flag"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -10,22 +10,20 @@ import (
 	"syscall"
 )
 
+func NewSignalingClient() *SignalingClient {
+	return &SignalingClient{}
+}
+
 // take flags for community and mac
-func main() {
-
-	var laddr = flag.String("laddr", "localhost:8080", "listen address")
-	var mac = flag.String("mac", "123", "mac (identification string)")
-	var community = flag.String("community", "a", "community to join")
-	flag.Parse()
-
+func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKey string) {
 	var partnerMac string
 
-	conn, err := net.Dial("tcp", *laddr)
+	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
 		panic(err)
 	}
 
-	application := Application{Opcode: "application", Community: *community, Mac: *mac}
+	application := Application{Opcode: "application", Community: communityKey, Mac: macKey}
 
 	byteArray, err := json.Marshal(application)
 	if err != nil {
@@ -70,6 +68,8 @@ func main() {
 
 		message := string(input[0:o])
 
+		fmt.Println(message)
+
 		values := make(map[string]json.RawMessage)
 
 		err = json.Unmarshal([]byte(message), &values)
@@ -81,7 +81,7 @@ func main() {
 		case acceptance:
 
 			// We actually don't need to unmarshal here because acceptance only contains an opcode
-			byteArray, err := json.Marshal(Ready{Opcode: string(ready), Mac: *mac})
+			byteArray, err := json.Marshal(Ready{Opcode: string(ready), Mac: macKey})
 			if err != nil {
 				panic(err)
 			}
@@ -207,5 +207,4 @@ func main() {
 		}
 
 	}
-
 }

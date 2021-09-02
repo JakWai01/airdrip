@@ -78,3 +78,5 @@ type SignalingServer struct {
 	connections    map[string]net.Conn
 	candidateCache []string
 }
+
+type SignalingClient struct{}

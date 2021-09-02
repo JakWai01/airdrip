@@ -1,6 +1,8 @@
 package signaling
 
-import "errors"
+import (
+	"errors"
+)
 
 func (s *SignalingServer) getCommunity(mac string) (string, error) {
 	for key, element := range s.communities {
@@ -10,6 +12,7 @@ func (s *SignalingServer) getCommunity(mac string) (string, error) {
 			}
 		}
 	}
+
 	return "", errors.New("This mac is not part of any community so far!")
 }
 

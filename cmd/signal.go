@@ -10,10 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	laddrKey = "laddr"
-)
-
 var signalCmd = &cobra.Command{
 	Use:   "signal",
 	Short: "Start a signaling server.",
@@ -21,6 +17,7 @@ var signalCmd = &cobra.Command{
 		// Handle lifecycle
 		fatal := make(chan error)
 		done := make(chan struct{})
+		signaler := signaling.NewSignalingServer()
 
 		go func() {
 
@@ -31,7 +28,7 @@ var signalCmd = &cobra.Command{
 
 			fmt.Println("signaling server listening on localhost:8080")
 			defer l.Accept()
-			signaler := signaling.NewSignalingServer()
+
 			for {
 				c, err := l.Accept()
 				if err != nil {
