@@ -8,14 +8,98 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
+
+	"github.com/pion/webrtc/v3"
 )
 
 func NewSignalingClient() *SignalingClient {
 	return &SignalingClient{}
 }
 
+// The whole point is to establish a WebRTC connection.
+
 // take flags for community and mac
 func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKey string) {
+	// Prepare the configuration
+	var config = webrtc.Configuration{
+		ICEServers: []webrtc.ICEServer{
+			{
+				URLs: []string{"stun:stun.l.google.com:19302"},
+			},
+		},
+	}
+
+	// Create a new RTCPeerConnection
+	var peerConnection, err = webrtc.NewPeerConnection(config)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if cErr := peerConnection.Close(); cErr != nil {
+			fmt.Printf("cannot close peerConnection: %v\n", cErr)
+		}
+	}()
+
+	// Set the handler for Peer connection state
+	// This will notify you when the peer has connected/disconnected
+	peerConnection.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
+		fmt.Printf("Peer Connection State has changed: %s\n", s.String())
+
+		if s == webrtc.PeerConnectionStateFailed {
+			// Wait until PeerConnection has had no network activity for 30 seconds or another failure.
+			// Use webrtc.PeerConnectionStateDisconnected if you are interested in detecting faster timeout.
+			// Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
+			fmt.Println("Peer Connection has gone to failed exiting")
+			os.Exit(0)
+		}
+	})
+
+	// Register data channel creation handling
+	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
+		fmt.Printf("New DataChannel %s %d\n", d.Label(), d.ID())
+
+		// Register channel opening handling
+		d.OnOpen(func() {
+			fmt.Printf("Data channel '%s'-'%d' open. Messages will now be sent to any connected DataChannels every 5 seconds\n", d.Label(), d.ID())
+
+			for range time.NewTicker(5 * time.Second).C {
+				message := "Hello, World!"
+				fmt.Printf("Sending '%s'\n", message)
+
+				// Send the message as text
+				sendErr := d.SendText(message)
+				if sendErr != nil {
+					panic(sendErr)
+				}
+			}
+		})
+
+		// Register text mesasage handling
+		d.OnMessage(func(msg webrtc.DataChannelMessage) {
+			fmt.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
+		})
+	})
+
+	// Wait for the offer to be pasted
+	// offer := webrtc.SessionDescription{}
+	offer_var, err := peerConnection.CreateOffer(nil)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(offer_var.SDP)
+
+	// send offer to other client
+
+	// We need to receive the offer from the signaling server (how to generate an offer)
+
+	// Then set remote description
+
+	// Create answer
+
+	// ...
+
 	var partnerMac string
 
 	conn, err := net.Dial("tcp", "localhost:8080")
