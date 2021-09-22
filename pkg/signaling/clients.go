@@ -41,6 +41,21 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		}
 	}()
 
+	// Create DataChannel
+	sendChannel, err := peerConnection.CreateDataChannel("foo", nil)
+	if err != nil {
+		panic(err)
+	}
+	sendChannel.OnClose(func() {
+		fmt.Println("sendChannel has closed")
+	})
+	sendChannel.OnOpen(func() {
+		fmt.Println("sendChannel has opened")
+	})
+	sendChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
+		fmt.Println(fmt.Sprintf("Message fromDatachannel %s payload %s", sendChannel.Label(), string(msg.Data)))
+	})
+
 	// Set the handler for Peer connection state
 	// This will notify you when the peer has connected/disconnected
 	peerConnection.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
@@ -80,15 +95,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			fmt.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
 		})
 	})
-
-	// Wait for the offer to be pasted
-	// offer := webrtc.SessionDescription{}
-	offer_var, err := peerConnection.CreateOffer(nil)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(offer_var.SDP)
 
 	// send offer to other client
 
@@ -189,8 +195,20 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			partnerMac = opcode.Mac
 
+			// Wait for the offer to be pasted
+			// offer := webrtc.SessionDescription{}
+			offer_var, err := peerConnection.CreateOffer(nil)
+			if err != nil {
+				panic(err)
+			}
+
+			// fmt.Println(offer_var.SDP)
+			if err := peerConnection.SetLocalDescription(offer_var); err != nil {
+				panic(err)
+			}
+
 			// send offer
-			byteArray, err := json.Marshal(Offer{Opcode: string(offer), Mac: partnerMac, Payload: "Hello World"})
+			byteArray, err := json.Marshal(Offer{Opcode: string(offer), Mac: partnerMac, Payload: offer_var.SDP})
 			if err != nil {
 				panic(err)
 			}
@@ -213,8 +231,33 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			partnerMac = opcode.Mac
 
+			payload := opcode.Payload
+
+			fmt.Println(payload)
+
+			offer_val := webrtc.SessionDescription{}
+			offer_val.SDP = payload
+			offer_val.Type = webrtc.SDPTypeOffer
+
+			if err := peerConnection.SetRemoteDescription(offer_val); err != nil {
+				panic(err)
+			}
+
+			answer_val, err := peerConnection.CreateAnswer(nil)
+			if err != nil {
+				panic(err)
+			}
+
+			// Create channel that is blocked until ICE Gathering is complete
+			gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
+
+			err = peerConnection.SetLocalDescription(answer_val)
+			if err != nil {
+				panic(err)
+			}
+
 			// send answer
-			byteArray, err := json.Marshal(Answer{Opcode: string(answer), Mac: partnerMac, Payload: "Answer"})
+			byteArray, err := json.Marshal(Answer{Opcode: string(answer), Mac: partnerMac, Payload: answer_val.SDP})
 			if err != nil {
 				panic(err)
 			}
@@ -225,7 +268,17 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				panic(err)
 			}
 
-			break
+			// Block until ICE Gathering is complete, disabling trickle ICE
+			// we do this because we only can exchange one signaling message
+			// in a production application you should exchange ICE Candidates via OnICECandidate
+			<-gatherComplete
+
+			// Output the answer in base64, so we can paste it in the browser
+			fmt.Println(*peerConnection.LocalDescription())
+
+			select {}
+
+			// break
 		case answer:
 			var opcode Answer
 
