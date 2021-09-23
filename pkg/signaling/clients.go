@@ -19,8 +19,14 @@ func NewSignalingClient() *SignalingClient {
 
 // The whole point is to establish a WebRTC connection.
 
-// take flags for community and mac
+// Take flags for community and mac
 func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKey string) {
+
+	conn, error := net.Dial("tcp", "localhost:8080")
+	if error != nil {
+		panic(error)
+	}
+
 	// Prepare the configuration
 	var config = webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
@@ -70,6 +76,39 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		}
 	})
 
+	// This triggers when WE have a candidate for the other peer, not the other way around
+	// This candidate key needs to be send to the other peer
+	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
+
+		// If nil isn't checked here, the program will throw a SEGFAULT at the end of conversation (as specified in: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/onicecandidate)
+		if i != nil {
+			candidate := Candidate{Opcode: "candidate", Mac: macKey, Payload: i.ToJSON().Candidate}
+			fmt.Println(candidate.Payload)
+
+			byteArray, err := json.Marshal(candidate)
+			if err != nil {
+				panic(err)
+			}
+
+			byteArray = append(byteArray, "\n"...)
+			_, err = conn.Write([]byte(byteArray))
+			if err != nil {
+				panic(err)
+			}
+
+		}
+	})
+
+	// This is the information we get
+
+	// Set ICE Candidate handler. As soon as a PeerConnection has gathered a candidate
+	// send it to the other peer
+	// answerPC.OnICECandidate(func(i *webrtc.ICECandidate) {
+	// 	if i != nil {
+	// 		check(offerPC.AddICECandidate(i.ToJSON()))
+	// 	}
+	// })
+
 	// Register data channel creation handling
 	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
 		fmt.Printf("New DataChannel %s %d\n", d.Label(), d.ID())
@@ -96,22 +135,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		})
 	})
 
-	// send offer to other client
-
-	// We need to receive the offer from the signaling server (how to generate an offer)
-
-	// Then set remote description
-
-	// Create answer
-
-	// ...
-
 	var partnerMac string
-
-	conn, err := net.Dial("tcp", "localhost:8080")
-	if err != nil {
-		panic(err)
-	}
 
 	application := Application{Opcode: "application", Community: communityKey, Mac: macKey}
 
@@ -147,7 +171,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		os.Exit(0)
 	}()
 
-	// enter loop here
 	for {
 		var input [1024]byte
 
@@ -196,13 +219,11 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			partnerMac = opcode.Mac
 
 			// Wait for the offer to be pasted
-			// offer := webrtc.SessionDescription{}
 			offer_var, err := peerConnection.CreateOffer(nil)
 			if err != nil {
 				panic(err)
 			}
 
-			// fmt.Println(offer_var.SDP)
 			if err := peerConnection.SetLocalDescription(offer_var); err != nil {
 				panic(err)
 			}
@@ -248,9 +269,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				panic(err)
 			}
 
-			// Create channel that is blocked until ICE Gathering is complete
-			gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
-
 			err = peerConnection.SetLocalDescription(answer_val)
 			if err != nil {
 				panic(err)
@@ -268,12 +286,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				panic(err)
 			}
 
-			// Block until ICE Gathering is complete, disabling trickle ICE
-			// we do this because we only can exchange one signaling message
-			// in a production application you should exchange ICE Candidates via OnICECandidate
-			<-gatherComplete
-
-			// Output the answer in base64, so we can paste it in the browser
 			fmt.Println(*peerConnection.LocalDescription())
 
 			select {}
@@ -289,20 +301,17 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			partnerMac = opcode.Mac
 
-			// send candidate
-			byteArray, err := json.Marshal(Candidate{Opcode: string(candidate), Mac: partnerMac, Payload: "Candidate"})
-			if err != nil {
-				panic(err)
-			}
+			offer_val := webrtc.SessionDescription{}
+			offer_val.SDP = opcode.Payload
+			offer_val.Type = webrtc.SDPTypeOffer
 
-			byteArray = append(byteArray, "\n"...)
-			_, err = conn.Write([]byte(byteArray))
-			if err != nil {
+			if err := peerConnection.SetRemoteDescription(offer_val); err != nil {
 				panic(err)
 			}
 
 			break
 		case candidate:
+
 			var opcode Candidate
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -310,17 +319,10 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				panic(err)
 			}
 
-			partnerMac = opcode.Mac
+			candidate_val := webrtc.ICECandidateInit{}
+			candidate_val.Candidate = opcode.Payload
 
-			// send candidate back
-			byteArray, err := json.Marshal(Candidate{Opcode: string(candidate), Mac: partnerMac, Payload: "Candidate 2"})
-			if err != nil {
-				panic(err)
-			}
-
-			byteArray = append(byteArray, "\n"...)
-
-			_, err = conn.Write([]byte(byteArray))
+			err = peerConnection.AddICECandidate(candidate_val)
 			if err != nil {
 				panic(err)
 			}
