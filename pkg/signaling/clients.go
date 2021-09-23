@@ -45,21 +45,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		}
 	}()
 
-	// Create DataChannel
-	sendChannel, err := peerConnection.CreateDataChannel("foo", nil)
-	if err != nil {
-		panic(err)
-	}
-	sendChannel.OnClose(func() {
-		fmt.Println("sendChannel has closed")
-	})
-	sendChannel.OnOpen(func() {
-		fmt.Println("sendChannel has opened")
-	})
-	sendChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
-		fmt.Println(fmt.Sprintf("Message fromDatachannel %s payload %s", sendChannel.Label(), string(msg.Data)))
-	})
-
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -104,7 +89,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 	// Register data channel creation handling
 	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
-		fmt.Printf("New DataChannel %s %d\n", d.Label(), d.ID())
 
 		// Register channel opening handling
 		d.OnOpen(func() {
@@ -164,8 +148,9 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	}()
 
 	for {
-		var input [1024]byte
+		var input [1000000]byte
 
+		// Switch to websockets to prevent relying on the size
 		o, err := conn.Read(input[0:])
 		if err != nil {
 			os.Exit(0)
@@ -175,6 +160,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 		fmt.Println(message)
 
+		// In structs nach dem switch reinmarshallen
 		values := make(map[string]json.RawMessage)
 
 		err = json.Unmarshal([]byte(message), &values)
@@ -197,9 +183,25 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			break
 		case introduction:
+
+			// Create DataChannel
+			sendChannel, err := peerConnection.CreateDataChannel("foo", nil)
+			if err != nil {
+				panic(err)
+			}
+			sendChannel.OnClose(func() {
+				fmt.Println("sendChannel has closed")
+			})
+			sendChannel.OnOpen(func() {
+				fmt.Println("sendChannel has opened")
+			})
+			sendChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
+				fmt.Println(fmt.Sprintf("Message fromDatachannel %s payload %s", sendChannel.Label(), string(msg.Data)))
+			})
+
 			var opcode Introduction
 
-			err := json.Unmarshal([]byte(message), &opcode)
+			err = json.Unmarshal([]byte(message), &opcode)
 			if err != nil {
 				panic(err)
 			}
