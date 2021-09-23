@@ -3,6 +3,7 @@ package signaling
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -68,9 +69,9 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		fmt.Printf("Peer Connection State has changed: %s\n", s.String())
 
 		if s == webrtc.PeerConnectionStateFailed {
-			// Wait until PeerConnection has had no network activity for 30 seconds or another failure.
-			// Use webrtc.PeerConnectionStateDisconnected if you are interested in detecting faster timeout.
-			// Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
+			// 	// Wait until PeerConnection has had no network activity for 30 seconds or another failure.
+			// 	// Use webrtc.PeerConnectionStateDisconnected if you are interested in detecting faster timeout.
+			// 	// Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
 			fmt.Println("Peer Connection has gone to failed exiting")
 			os.Exit(0)
 		}
@@ -80,6 +81,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	// This candidate key needs to be send to the other peer
 	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
 		// If nil isn't checked here, the program will throw a SEGFAULT at the end of conversation (as specified in: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/onicecandidate)
+		log.Printf("Candidate generated for mac %v", macKey)
 		if i != nil {
 			wg.Wait()
 
@@ -95,21 +97,10 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			if err != nil {
 				panic(err)
 			}
-
+		} else {
+			log.Println("Candidate was nil")
 		}
 	})
-
-	// ---------------------------------------------------------------------------------------
-	// This is the information we get
-
-	// Set ICE Candidate handler. As soon as a PeerConnection has gathered a candidate
-	// send it to the other peer
-	// answerPC.OnICECandidate(func(i *webrtc.ICECandidate) {
-	// 	if i != nil {
-	// 		check(offerPC.AddICECandidate(i.ToJSON()))
-	// 	}
-	// })
-	// ---------------------------------------------------------------------------------------
 
 	// Register data channel creation handling
 	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
@@ -246,10 +237,8 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			partnerMac = opcode.Mac
 
-			payload := opcode.Payload
-
 			offer_val := webrtc.SessionDescription{}
-			offer_val.SDP = payload
+			offer_val.SDP = opcode.Payload
 			offer_val.Type = webrtc.SDPTypeOffer
 
 			if err := peerConnection.SetRemoteDescription(offer_val); err != nil {
@@ -291,7 +280,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			offer_val := webrtc.SessionDescription{}
 			offer_val.SDP = opcode.Payload
-			offer_val.Type = webrtc.SDPTypeOffer
+			offer_val.Type = webrtc.SDPTypeAnswer
 
 			if err := peerConnection.SetRemoteDescription(offer_val); err != nil {
 				panic(err)
@@ -310,12 +299,15 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			candidate_val := webrtc.ICECandidateInit{}
 			candidate_val.Candidate = opcode.Payload
 
+			fmt.Println("ASLDKJSALKDJAKLSJDAKLSJD")
+			fmt.Println(opcode.Payload)
+			fmt.Println("ASDJLSAJDKLASJDLKSAJDLSAKJDL")
+
 			err = peerConnection.AddICECandidate(candidate_val)
 			if err != nil {
 				panic(err)
 			}
 
-			// check for candidates
 			break
 		case resignation:
 			byteArray, err := json.Marshal(Exited{Opcode: string(exited)})

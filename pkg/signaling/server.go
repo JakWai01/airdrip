@@ -216,7 +216,6 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 			case candidate:
 				var opcode Candidate
 
-				fmt.Println("Candidate received!")
 				err := json.Unmarshal([]byte(message), &opcode)
 				if err != nil {
 					panic(err)
@@ -239,15 +238,11 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 				}
 
 				// Only write if we haven't written yet
-				if contains(s.candidateCache, opcode.Mac) {
-					break
-				} else {
-					s.candidateCache = append(s.candidateCache, opcode.Mac)
+				s.candidateCache = append(s.candidateCache, opcode.Mac)
 
-					_, err = receiver.Write(byteArray)
-					if err != nil {
-						panic(err)
-					}
+				_, err = receiver.Write(byteArray)
+				if err != nil {
+					panic(err)
 				}
 
 				break
