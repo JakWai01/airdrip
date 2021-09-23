@@ -20,7 +20,7 @@ func NewSignalingServer() *SignalingServer {
 	}
 }
 
-// This is a method of the type SignalingServer
+// Method of the type SignalingServer
 func (s *SignalingServer) HandleConn(c net.Conn) {
 
 	fatal := make(chan error)
@@ -45,12 +45,8 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 				panic(err)
 			}
 
-			// Handle different message types
 			switch Opcode(strings.ReplaceAll(string(values["opcode"]), "\"", "")) {
 			case application:
-				// we get community and mac. Check if community exists. If not create it. Only allow unused macs.
-
-				// Community maps string to tuple. Macs is an array and must be unique.
 				var opcode Application
 
 				err := json.Unmarshal([]byte(message), &opcode)
@@ -59,7 +55,7 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 				}
 
 				if _, ok := s.macs[opcode.Mac]; ok {
-					// send Rejection. That Mac is already contained
+					// Send Rejection. That Mac is already contained
 					byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
 					if err != nil {
 						panic(err)
@@ -72,14 +68,12 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 					break
 				}
 
-				// Store connection in a map
 				s.connections[opcode.Mac] = c
 
-				// check if community exists and if there are less than 2 members inside
+				// Check if community exists and if there are less than 2 members inside
 				if val, ok := s.communities[opcode.Community]; ok {
-					// check if length smaller than 2
 					if len(val) >= 2 {
-						// send Rejection. This community is full
+						// Send Rejection. This community is full
 						byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
 						if err != nil {
 							panic(err)
@@ -96,7 +90,6 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 
 						s.macs[opcode.Mac] = false
 
-						// send Acceptance
 						byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
 						if err != nil {
 							panic(err)
@@ -114,7 +107,6 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 
 					s.macs[opcode.Mac] = false
 
-					// send Acceptance
 					byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
 					if err != nil {
 						panic(err)
@@ -164,7 +156,6 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 				break
 
 			case offer:
-				// Contains the mac of the receiver and a payload this receiver should receive
 				var opcode Offer
 
 				err := json.Unmarshal([]byte(message), &opcode)
@@ -247,7 +238,7 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 					panic(err)
 				}
 
-				// only write if we haven't written yet
+				// Only write if we haven't written yet
 				if contains(s.candidateCache, opcode.Mac) {
 					break
 				} else {
@@ -291,10 +282,10 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 
 				if len(s.communities[community]) == 2 {
 					if senderMac == s.communities[community][0] {
-						// the second one is receiver
+						// The second one is receiver
 						receiver = s.connections[s.communities[community][1]]
 					} else {
-						// first one
+						// First one
 						receiver = s.connections[s.communities[community][0]]
 					}
 				} else {

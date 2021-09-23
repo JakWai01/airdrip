@@ -17,9 +17,6 @@ func NewSignalingClient() *SignalingClient {
 	return &SignalingClient{}
 }
 
-// The whole point is to establish a WebRTC connection.
-
-// Take flags for community and mac
 func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKey string) {
 
 	conn, error := net.Dial("tcp", "localhost:8080")
@@ -27,7 +24,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		panic(error)
 	}
 
-	// Prepare the configuration
+	// Prepare configuration
 	var config = webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
@@ -36,7 +33,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		},
 	}
 
-	// Create a new RTCPeerConnection
+	// Create RTCPeerConnection
 	var peerConnection, err = webrtc.NewPeerConnection(config)
 	if err != nil {
 		panic(err)
@@ -99,6 +96,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		}
 	})
 
+	// ---------------------------------------------------------------------------------------
 	// This is the information we get
 
 	// Set ICE Candidate handler. As soon as a PeerConnection has gathered a candidate
@@ -108,6 +106,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	// 		check(offerPC.AddICECandidate(i.ToJSON()))
 	// 	}
 	// })
+	// ---------------------------------------------------------------------------------------
 
 	// Register data channel creation handling
 	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
@@ -155,7 +154,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	go func() {
 		<-c
 
-		// send exited
 		byteArray, err := json.Marshal(Exited{Opcode: string(exited)})
 		if err != nil {
 			panic(err)
@@ -228,7 +226,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				panic(err)
 			}
 
-			// send offer
 			byteArray, err := json.Marshal(Offer{Opcode: string(offer), Mac: partnerMac, Payload: offer_var.SDP})
 			if err != nil {
 				panic(err)
@@ -274,7 +271,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				panic(err)
 			}
 
-			// send answer
 			byteArray, err := json.Marshal(Answer{Opcode: string(answer), Mac: partnerMac, Payload: answer_val.SDP})
 			if err != nil {
 				panic(err)
@@ -289,8 +285,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			fmt.Println(*peerConnection.LocalDescription())
 
 			select {}
-
-			// break
 		case answer:
 			var opcode Answer
 
