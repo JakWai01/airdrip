@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -18,7 +19,6 @@ func NewSignalingClient() *SignalingClient {
 }
 
 func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKey string) {
-
 	conn, error := net.Dial("tcp", "localhost:8080")
 	if error != nil {
 		panic(error)
@@ -59,6 +59,9 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		fmt.Println(fmt.Sprintf("Message fromDatachannel %s payload %s", sendChannel.Label(), string(msg.Data)))
 	})
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	// Set the handler for Peer connection state
 	// This will notify you when the peer has connected/disconnected
 	peerConnection.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
@@ -76,11 +79,11 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	// This triggers when WE have a candidate for the other peer, not the other way around
 	// This candidate key needs to be send to the other peer
 	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
-
 		// If nil isn't checked here, the program will throw a SEGFAULT at the end of conversation (as specified in: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/onicecandidate)
 		if i != nil {
+			wg.Wait()
+
 			candidate := Candidate{Opcode: "candidate", Mac: macKey, Payload: i.ToJSON().Candidate}
-			fmt.Println(candidate.Payload)
 
 			byteArray, err := json.Marshal(candidate)
 			if err != nil {
@@ -190,8 +193,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 		switch Opcode(strings.ReplaceAll(string(values["opcode"]), "\"", "")) {
 		case acceptance:
-
-			// We actually don't need to unmarshal here because acceptance only contains an opcode
 			byteArray, err := json.Marshal(Ready{Opcode: string(ready), Mac: macKey})
 			if err != nil {
 				panic(err)
@@ -205,8 +206,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			break
 		case introduction:
-
-			// We get the mac of our partner and store it
 			var opcode Introduction
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -216,7 +215,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			partnerMac = opcode.Mac
 
-			// Wait for the offer to be pasted
 			offer_var, err := peerConnection.CreateOffer(nil)
 			if err != nil {
 				panic(err)
@@ -239,7 +237,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			break
 		case offer:
-
 			var opcode Offer
 
 			err := json.Unmarshal([]byte(message), &opcode)
@@ -250,8 +247,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			partnerMac = opcode.Mac
 
 			payload := opcode.Payload
-
-			fmt.Println(payload)
 
 			offer_val := webrtc.SessionDescription{}
 			offer_val.SDP = payload
@@ -282,9 +277,8 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				panic(err)
 			}
 
-			fmt.Println(*peerConnection.LocalDescription())
-
-			select {}
+			wg.Done()
+			break
 		case answer:
 			var opcode Answer
 
@@ -303,9 +297,9 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				panic(err)
 			}
 
+			wg.Done()
 			break
 		case candidate:
-
 			var opcode Candidate
 
 			err := json.Unmarshal([]byte(message), &opcode)
