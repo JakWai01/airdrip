@@ -36,7 +36,7 @@ var signalCmd = &cobra.Command{
 				log.Println("client connected")
 
 				go func() {
-					signaler.HandleConn(conn)
+					signaler.HandleConn(*conn)
 				}()
 			})
 

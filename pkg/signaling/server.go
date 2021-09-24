@@ -23,7 +23,7 @@ func NewSignalingServer() *SignalingServer {
 	}
 }
 
-func (s *SignalingServer) HandleConn(conn *websocket.Conn) {
+func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 	go func() {
 		for {
@@ -45,7 +45,6 @@ func (s *SignalingServer) HandleConn(conn *websocket.Conn) {
 			// Handle different message types
 			switch v.Opcode {
 			case api.OpcodeApplication:
-
 				var application api.Application
 				if err := json.Unmarshal(data, &application); err != nil {
 					log.Fatal(err)
@@ -56,19 +55,19 @@ func (s *SignalingServer) HandleConn(conn *websocket.Conn) {
 					// Send rejection. That mac is already contained
 
 					// Check if this conn is correct
-					if err := wsjson.Write(context.Background(), conn, api.NewRejection()); err != nil {
+					if err := wsjson.Write(context.Background(), &conn, api.NewRejection()); err != nil {
 						log.Fatal(err)
 					}
 					break
 				}
 
-				s.connections[application.Mac] = *conn
+				s.connections[application.Mac] = conn
 
 				// Check if community exists and if there are less than 2 members inside
 				if val, ok := s.communities[application.Community]; ok {
 					if len(val) >= 2 {
 						// Send Rejection. This community is full
-						if err := wsjson.Write(context.Background(), conn, api.NewRejection()); err != nil {
+						if err := wsjson.Write(context.Background(), &conn, api.NewRejection()); err != nil {
 							log.Fatal(err)
 						}
 
@@ -79,7 +78,7 @@ func (s *SignalingServer) HandleConn(conn *websocket.Conn) {
 
 						s.macs[application.Mac] = false
 
-						if err := wsjson.Write(context.Background(), conn, api.NewAcceptance()); err != nil {
+						if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
 							log.Fatal(err)
 						}
 
@@ -91,14 +90,81 @@ func (s *SignalingServer) HandleConn(conn *websocket.Conn) {
 
 					s.macs[application.Mac] = false
 
-					if err := wsjson.Write(context.Background(), conn, api.NewAcceptance()); err != nil {
+					if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
 						log.Fatal(err)
 					}
 					break
 				}
 
 			case api.OpcodeReady:
+				var ready api.Ready
+				if err := json.Unmarshal(data, &ready); err != nil {
+					log.Fatal(err)
+				}
+
+				// If we receive ready, mark the sending person as ready and check if both are ready. Loop through all communities to get the community the person is in.
+				s.macs[ready.Mac] = true
+
+				// Loop thorugh all members of the community and thorugh all elements in it. If the mac isn't member of a community, this will panic.
+				community, err := s.getCommunity(ready.Mac)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				if len(s.communities[community]) == 2 {
+					if s.macs[s.communities[community][0]] == true && s.macs[s.communities[community][1]] == true {
+						// Send an introduction to the peer containing the address of the first peer.
+						if err := wsjson.Write(context.Background(), &conn, api.NewIntroduction(s.communities[community][0])); err != nil {
+							log.Fatal(err)
+						}
+						break
+					}
+				}
+				break
 			case api.OpcodeOffer:
+				var offer api.Offer
+				if err := json.Unmarshal(data, &offer); err != nil {
+					log.Fatal(err)
+				}
+
+				// Get the connection of the receiver and send him the payload
+				receiver := s.connections[offer.Mac]
+
+				// var senderMac string
+
+				// Get the Mac based on the current connection out of the connection mac
+				// for key, val := range s.connections {
+				// 	// This case is never true
+				// 	if conn == val {
+				// 		fmt.Println("ASLDKJASLDKJASDLKJLKAJSDLKJASDLKJASLDKJALSKJDLAKJSD")
+				// 		senderMac = key
+				// 	}
+				// }
+
+				// Check the mac, take the other community
+				community, err := s.getCommunity(offer.Mac)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				var senderMac string
+
+				if len(s.communities[community]) == 2 {
+					if senderMac == s.communities[community][0] {
+						// The second one is receiver
+						receiver = s.connections[s.communities[community][1]]
+					} else {
+						// First one
+						receiver = s.connections[s.communities[community][0]]
+					}
+				} else {
+					receiver = s.connections[s.communities[community][0]]
+				}
+
+				if err := wsjson.Write(context.Background(), &receiver, api.NewOffer(senderMac, offer.Payload)); err != nil {
+					log.Fatal(err)
+				}
+				break
 			case api.OpcodeAnswer:
 			case api.OpcodeCandidate:
 			case api.OpcodeExited:

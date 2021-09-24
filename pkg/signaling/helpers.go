@@ -1,7 +1,9 @@
 package signaling
 
 import (
+	"crypto/sha256"
 	"errors"
+	"fmt"
 )
 
 func (s *SignalingServer) getCommunity(mac string) (string, error) {
@@ -34,4 +36,11 @@ func deleteElement(s []string, str string) []string {
 		}
 	}
 	return append(s[:elementIndex], s[elementIndex+1:]...)
+}
+
+func asSha256(o interface{}) string {
+	h := sha256.New()
+	h.Write([]byte(fmt.Sprintf("%v", o)))
+
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
