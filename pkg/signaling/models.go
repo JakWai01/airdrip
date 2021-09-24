@@ -20,56 +20,56 @@ const (
 	resignation  Opcode = "resignation"
 )
 
-type Application struct {
-	Opcode    string `json:"opcode"`
-	Community string `json:"community"`
-	Mac       string `json:"mac"`
-}
+// type Application struct {
+// 	Opcode    string `json:"opcode"`
+// 	Community string `json:"community"`
+// 	Mac       string `json:"mac"`
+// }
 
-type Acceptance struct {
-	Opcode string `json:"opcode"`
-}
+// type Acceptance struct {
+// 	Opcode string `json:"opcode"`
+// }
 
-type Rejection struct {
-	Opcode string `json:"opcode"`
-}
+// type Rejection struct {
+// 	Opcode string `json:"opcode"`
+// }
 
-type Ready struct {
-	Opcode string `json:"opcode"`
-	Mac    string `json:"mac"`
-}
+// type Ready struct {
+// 	Opcode string `json:"opcode"`
+// 	Mac    string `json:"mac"`
+// }
 
-type Introduction struct {
-	Opcode string `json:"opcode"`
-	Mac    string `json:"mac"`
-}
+// type Introduction struct {
+// 	Opcode string `json:"opcode"`
+// 	Mac    string `json:"mac"`
+// }
 
-type Offer struct {
-	Opcode  string `json:"opcode"`
-	Mac     string `json:"mac"`
-	Payload string `json:"payload"`
-}
+// type Offer struct {
+// 	Opcode  string `json:"opcode"`
+// 	Mac     string `json:"mac"`
+// 	Payload string `json:"payload"`
+// }
 
-type Answer struct {
-	Opcode  string `json:"opcode"`
-	Mac     string `json:"mac"`
-	Payload string `json:"payload"`
-}
+// type Answer struct {
+// 	Opcode  string `json:"opcode"`
+// 	Mac     string `json:"mac"`
+// 	Payload string `json:"payload"`
+// }
 
-type Candidate struct {
-	Opcode  string `json:"opcode"`
-	Mac     string `json:"mac"`
-	Payload string `json:"payload"`
-}
+// type Candidate struct {
+// 	Opcode  string `json:"opcode"`
+// 	Mac     string `json:"mac"`
+// 	Payload string `json:"payload"`
+// }
 
-type Exited struct {
-	Opcode string `json:"opcode"`
-}
+// type Exited struct {
+// 	Opcode string `json:"opcode"`
+// }
 
-type Resignation struct {
-	Opcode string `json:"opcode"`
-	Mac    string `json:"mac"`
-}
+// type Resignation struct {
+// 	Opcode string `json:"opcode"`
+// 	Mac    string `json:"mac"`
+// }
 
 type SignalingServer struct {
 	lock           sync.Mutex
