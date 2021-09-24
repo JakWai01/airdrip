@@ -188,7 +188,84 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 				break
 			case api.OpcodeCandidate:
+				var candidate api.Candidate
+				if err := json.Unmarshal(data, &candidate); err != nil {
+					log.Fatal(err)
+				}
+
+				// Get connection of the receiver and send him the payload
+				receiver := s.connections[candidate.Mac]
+
+				community, err := s.getCommunity(candidate.Mac)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				var senderMac string
+
+				if len(s.communities[community]) == 2 {
+					if candidate.Mac == s.communities[community][1] {
+						// The second one is sender
+						senderMac = s.communities[community][0]
+					} else {
+						// First one
+						senderMac = s.communities[community][1]
+					}
+				} else {
+					senderMac = s.communities[community][1]
+				}
+
+				if err := wsjson.Write(context.Background(), &receiver, api.NewCandidate(senderMac, candidate.Payload)); err != nil {
+					log.Fatal(err)
+				}
+
+				break
 			case api.OpcodeExited:
+				var exited api.Exited
+				if err := json.Unmarshal(data, &exited); err != nil {
+					log.Fatal(err)
+				}
+
+				var receiver websocket.Conn
+
+				// Get the other peer in the community
+				community, err := s.getCommunity(exited.Mac)
+				if err != nil {
+					panic(err)
+				}
+
+				if len(s.communities[community]) == 2 {
+					if exited.Mac == s.communities[community][0] {
+						// The second one is receiver
+						receiver = s.connections[s.communities[community][1]]
+					} else {
+						// First one
+						receiver = s.connections[s.communities[community][0]]
+					}
+				} else {
+					receiver = s.connections[s.communities[community][0]]
+				}
+
+				// Send to the other peer
+				if err := wsjson.Write(context.Background(), &receiver, api.NewResignation(exited.Mac)); err != nil {
+					log.Fatal()
+				}
+
+				// Remove this peer from all maps
+				delete(s.macs, exited.Mac)
+				delete(s.connections, exited.Mac)
+
+				// Remove meber from community
+				s.communities[community] = deleteElement(s.communities[community], exited.Mac)
+
+				// Remove community only if there is only one member left
+				if len(s.communities[community]) == 0 {
+					delete(s.communities, community)
+				}
+
+				return
+			default:
+				panic("Invalid message. Please use a valid opcode.")
 			}
 		}
 	}()

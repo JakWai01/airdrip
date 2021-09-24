@@ -44,6 +44,7 @@ type Candidate struct {
 
 type Exited struct {
 	Message
+	Mac string `json:"mac"`
 }
 
 type Resignation struct {
@@ -83,8 +84,8 @@ func NewCandidate(mac string, payload string) *Candidate {
 	return &Candidate{Message: Message{OpcodeCandidate}, Mac: mac, Payload: payload}
 }
 
-func NewExited() *Exited {
-	return &Exited{Message: Message{OpcodeExited}}
+func NewExited(mac string) *Exited {
+	return &Exited{Message: Message{OpcodeExited}, Mac: mac}
 }
 
 func NewResignation(mac string) *Resignation {
