@@ -1,13 +1,13 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"net"
-	"os"
+	"net/http"
 
 	"github.com/JakWai01/airdrip/pkg/signaling"
 	"github.com/spf13/cobra"
+	"nhooyr.io/websocket"
 )
 
 var signalCmd = &cobra.Command{
@@ -15,37 +15,32 @@ var signalCmd = &cobra.Command{
 	Short: "Start a signaling server.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Handle lifecycle
-		fatal := make(chan error)
-		done := make(chan struct{})
 		signaler := signaling.NewSignalingServer()
 
-		go func() {
+		for {
+			laddr := "localhost:8080"
 
-			l, err := net.Listen("tcp", "localhost:8080")
+			addr, err := net.ResolveTCPAddr("tcp", laddr)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 
-			fmt.Println("signaling server listening on localhost:8080")
-			defer l.Accept()
+			log.Printf("signaling server listening on %v", laddr)
 
-			for {
-				c, err := l.Accept()
+			handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+				conn, err := websocket.Accept(rw, r, nil)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
-				go signaler.HandleConn(c)
-			}
-		}()
+				log.Println("client connected")
 
-		for {
-			select {
-			case err := <-fatal:
-				log.Fatal(err)
-			case <-done:
-				os.Exit(0)
-			}
+				go func() {
+					signaler.HandleConn(conn)
+				}()
+			})
+
+			http.ListenAndServe(addr.String(), handler)
 		}
 	},
 }

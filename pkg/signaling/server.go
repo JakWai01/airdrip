@@ -3,11 +3,13 @@ package signaling
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 
 	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
 	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 // This signaling protocol is heavily inspired by the weron project created by @pojntfx
@@ -26,11 +28,14 @@ func (s *SignalingServer) HandleConn(conn *websocket.Conn) {
 
 	go func() {
 		for {
+
 			// Read message from connection
 			_, data, err := conn.Read(context.Background())
 			if err != nil {
 				log.Fatal(err)
 			}
+
+			fmt.Println(string(data))
 
 			// Parse message
 			var v api.Message
@@ -41,6 +46,19 @@ func (s *SignalingServer) HandleConn(conn *websocket.Conn) {
 			// Handle different message types
 			switch v.Opcode {
 			case api.OpcodeApplication:
+				var application api.Application
+				if err := json.Unmarshal(data, &application); err != nil {
+					log.Fatal(err)
+				}
+
+				if _, ok := s.macs[application.Mac]; ok {
+					// Send rejection. That mac is already contained
+
+					// Check if this conn is correct
+					if err := wsjson.Write(context.Background(), conn, api.NewRejection()); err != nil {
+						log.Fatal(err)
+					}
+				}
 			case api.OpcodeReady:
 			case api.OpcodeOffer:
 			case api.OpcodeAnswer:
