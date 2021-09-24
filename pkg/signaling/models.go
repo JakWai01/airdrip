@@ -1,8 +1,9 @@
 package signaling
 
 import (
-	"net"
 	"sync"
+
+	"nhooyr.io/websocket"
 )
 
 type Opcode string
@@ -75,7 +76,7 @@ type SignalingServer struct {
 	lock           sync.Mutex
 	communities    map[string][]string
 	macs           map[string]bool
-	connections    map[string]net.Conn
+	connections    map[string]websocket.Conn
 	candidateCache []string
 }
 
