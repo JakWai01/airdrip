@@ -130,35 +130,24 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				// Get the connection of the receiver and send him the payload
 				receiver := s.connections[offer.Mac]
 
-				// var senderMac string
-
-				// Get the Mac based on the current connection out of the connection mac
-				// for key, val := range s.connections {
-				// 	// This case is never true
-				// 	if conn == val {
-				// 		fmt.Println("ASLDKJASLDKJASDLKJLKAJSDLKJASDLKJASLDKJALSKJDLAKJSD")
-				// 		senderMac = key
-				// 	}
-				// }
-
-				// Check the mac, take the other community
 				community, err := s.getCommunity(offer.Mac)
 				if err != nil {
 					log.Fatal(err)
 				}
 
+				// We need to assign this
 				var senderMac string
 
 				if len(s.communities[community]) == 2 {
-					if senderMac == s.communities[community][0] {
-						// The second one is receiver
-						receiver = s.connections[s.communities[community][1]]
+					if offer.Mac == s.communities[community][1] {
+						// The second one is sender
+						senderMac = s.communities[community][0]
 					} else {
 						// First one
-						receiver = s.connections[s.communities[community][0]]
+						senderMac = s.communities[community][1]
 					}
 				} else {
-					receiver = s.connections[s.communities[community][0]]
+					senderMac = s.communities[community][1]
 				}
 
 				if err := wsjson.Write(context.Background(), &receiver, api.NewOffer(senderMac, offer.Payload)); err != nil {
@@ -166,6 +155,38 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				}
 				break
 			case api.OpcodeAnswer:
+				var answer api.Answer
+				if err := json.Unmarshal(data, &answer); err != nil {
+					log.Fatal(err)
+				}
+
+				// Get connection of the receiver and send him the payload
+				receiver := s.connections[answer.Mac]
+
+				community, err := s.getCommunity(answer.Mac)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				var senderMac string
+
+				if len(s.communities[community]) == 2 {
+					if answer.Mac == s.communities[community][1] {
+						// The second one is sender
+						senderMac = s.communities[community][0]
+					} else {
+						// First one
+						senderMac = s.communities[community][1]
+					}
+				} else {
+					senderMac = s.communities[community][1]
+				}
+
+				if err := wsjson.Write(context.Background(), &receiver, api.NewAnswer(senderMac, answer.Payload)); err != nil {
+					log.Fatal(err)
+				}
+
+				break
 			case api.OpcodeCandidate:
 			case api.OpcodeExited:
 			}
