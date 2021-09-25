@@ -1,5 +1,191 @@
 package signaling
 
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
+
+	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
+	"github.com/pion/webrtc/v3"
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
+)
+
 func NewSignalingClient() *SignalingClient {
 	return &SignalingClient{}
+}
+
+func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKey string) {
+	conn, _, error := websocket.Dial(context.Background(), "ws://localhost:8080", nil)
+	if error != nil {
+		log.Fatal(error)
+	}
+	defer conn.Close(websocket.StatusInternalError, "the sky is falling")
+
+	// Prepare configuration
+	var config = webrtc.Configuration{
+		ICEServers: []webrtc.ICEServer{
+			{
+				URLs: []string{"stun:stun.l.google.com:19302"},
+			},
+		},
+	}
+
+	// Create RTCPeerConnection
+	var peerConnection, err = webrtc.NewPeerConnection(config)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if cErr := peerConnection.Close(); cErr != nil {
+			log.Printf("cannot close peerConnection: %v\n", cErr)
+		}
+	}()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// Set the handler for peer connection state
+	// This will notify you when the peer has connected/disconnected
+	peerConnection.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
+		log.Printf("Peer Connection State has changed: %s\n", s.String())
+
+		if s == webrtc.PeerConnectionStateFailed {
+			// Wait until PeerConnection has had no network activity for 30 seconds or another failure.
+			// Use webrtc.PeerCOnnectionStateDisconnected if you are interested in detecting faster timeout.
+			// Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
+			log.Println("Peer Connection has gone to failed exiting")
+			os.Exit(0)
+		}
+	})
+
+	// This triggers when WE have a candidate for the other peer, not the other way around
+	// This candidate key needs to be send to the other peer
+	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
+		// If nil isn't checked here, the program will throw a SEGFAULT at the end of conversation (as specified in: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/onicecandidate)
+		log.Printf("Candidate generated for mac %v", macKey)
+		if i != nil {
+			wg.Wait()
+
+			if err := wsjson.Write(context.Background(), conn, api.NewCandidate(macKey, i.ToJSON().Candidate)); err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			log.Println("Candidate was nil")
+		}
+	})
+
+	// Register data channel creation handling
+	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
+
+		// Register channel opening handling
+		d.OnOpen(func() {
+			log.Printf("Data channel '%s'-'%d' open. Messages will now be send to any connected DataChannels every 5 seconds\n", d.Label(), d.ID())
+
+			for range time.NewTicker(5 * time.Second).C {
+				message := "Hello, World!"
+				log.Printf("Sending '%s'\n", message)
+
+				// Send the message as text
+				sendErr := d.SendText(message)
+				if sendErr != nil {
+					log.Fatal(sendErr)
+				}
+			}
+		})
+
+		// Register text message handling
+		d.OnMessage(func(msg webrtc.DataChannelMessage) {
+			log.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
+		})
+	})
+
+	// var partnerMac string
+
+	if err := wsjson.Write(context.Background(), conn, api.NewApplication(communityKey, macKey)); err != nil {
+		log.Fatal(err)
+	}
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+
+		if err := wsjson.Write(context.Background(), conn, api.NewExited(macKey)); err != nil {
+			log.Fatal(err)
+		}
+
+		os.Exit(0)
+	}()
+
+	for {
+		// Read message from connection
+		_, data, err := conn.Read(context.Background())
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Println(string(data))
+
+		// Parse message
+		var v api.Message
+		if err := json.Unmarshal(data, &v); err != nil {
+			log.Fatal(err)
+		}
+
+		// Handle different message types
+		switch v.Opcode {
+		case api.OpcodeAcceptance:
+			if err := wsjson.Write(context.Background(), conn, api.NewAcceptance()); err != nil {
+				log.Fatal(err)
+			}
+			break
+		case api.OpcodeIntroduction:
+			// Create DataChannel
+			sendChannel, err := peerConnection.CreateDataChannel("foo", nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+			sendChannel.OnClose(func() {
+				log.Println("sendChannel has closed")
+			})
+			sendChannel.OnOpen(func() {
+				log.Println("sendChannel has opened")
+			})
+			sendChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
+				log.Printf("Message from DataChannel %s payload %s", sendChannel.Label(), string(msg.Data))
+			})
+
+			var introduction api.Introduction
+			if err := json.Unmarshal(data, &introduction); err != nil {
+				log.Fatal(err)
+			}
+
+			partnerMac := introduction.Mac
+
+			offer, err := peerConnection.CreateOffer(nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if err := peerConnection.SetLocalDescription(offer); err != nil {
+				log.Fatal(err)
+			}
+
+			if err := wsjson.Write(context.Background(), conn, api.NewOffer(partnerMac, offer.SDP)); err != nil {
+				log.Fatal(err)
+			}
+
+			break
+		case api.OpcodeOffer:
+		case api.OpcodeAnswer:
+		case api.OpcodeCandidate:
+		case api.OpcodeResignation:
+		}
+	}
 }
