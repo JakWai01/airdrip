@@ -183,9 +183,76 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 			break
 		case api.OpcodeOffer:
+			var offer api.Offer
+			if err := json.Unmarshal(data, &offer); err != nil {
+				log.Fatal(err)
+			}
+
+			partnerMac := offer.Mac
+
+			offer_val := webrtc.SessionDescription{}
+			offer_val.SDP = offer.Payload
+			offer_val.Type = webrtc.SDPTypeOffer
+
+			if err := peerConnection.SetRemoteDescription(offer_val); err != nil {
+				log.Fatal(err)
+			}
+
+			answer_val, err := peerConnection.CreateAnswer(nil)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			err = peerConnection.SetLocalDescription(answer_val)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if err := wsjson.Write(context.Background(), conn, api.NewAnswer(partnerMac, answer_val.SDP)); err != nil {
+				log.Fatal(err)
+			}
+
+			wg.Done()
+			break
 		case api.OpcodeAnswer:
+			var answer api.Answer
+			if err := json.Unmarshal(data, &answer); err != nil {
+				log.Fatal(err)
+			}
+
+			answer_val := webrtc.SessionDescription{}
+			answer_val.SDP = answer.Payload
+			answer_val.Type = webrtc.SDPTypeAnswer
+
+			if err := peerConnection.SetRemoteDescription(answer_val); err != nil {
+				log.Fatal(err)
+			}
+
+			wg.Done()
+			break
 		case api.OpcodeCandidate:
+			var candidate api.Candidate
+			if err := json.Unmarshal(data, &candidate); err != nil {
+				log.Fatal(err)
+			}
+
+			candidate_val := webrtc.ICECandidateInit{}
+			candidate_val.Candidate = candidate.Payload
+
+			log.Println(candidate.Payload)
+
+			err = peerConnection.AddICECandidate(candidate_val)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			break
 		case api.OpcodeResignation:
+			if err := wsjson.Write(context.Background(), conn, api.NewExited(macKey)); err != nil {
+				log.Fatal(err)
+			}
+
+			os.Exit(0)
 		}
 	}
 }
