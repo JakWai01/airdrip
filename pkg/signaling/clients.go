@@ -141,7 +141,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		// Handle different message types
 		switch v.Opcode {
 		case api.OpcodeAcceptance:
-			if err := wsjson.Write(context.Background(), conn, api.NewAcceptance()); err != nil {
+			if err := wsjson.Write(context.Background(), conn, api.NewReady(macKey)); err != nil {
 				log.Fatal(err)
 			}
 			break
