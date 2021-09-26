@@ -83,6 +83,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	// Register data channel creation handling
 	peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
 
+		log.Println("OnDataChannel")
 		// Register channel opening handling
 		d.OnOpen(func() {
 			log.Printf("Data channel '%s'-'%d' open. Messages will now be send to any connected DataChannels every 5 seconds\n", d.Label(), d.ID())
@@ -239,11 +240,12 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			candidate_val := webrtc.ICECandidateInit{}
 			candidate_val.Candidate = candidate.Payload
 
-			log.Println(candidate.Payload)
+			if peerConnection.RemoteDescription() != nil {
+				err = peerConnection.AddICECandidate(candidate_val)
 
-			err = peerConnection.AddICECandidate(candidate_val)
-			if err != nil {
-				log.Fatal(err)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 
 			break

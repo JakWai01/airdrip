@@ -51,7 +51,6 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				}
 
 				if _, ok := s.macs[application.Mac]; ok {
-					fmt.Println("application")
 					// Send rejection. That mac is already contained
 
 					// Check if this conn is correct
