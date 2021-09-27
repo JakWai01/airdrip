@@ -16,6 +16,7 @@ import (
 
 func signalCandidate(addr string, c *webrtc.ICECandidate) error {
 	payload := []byte(c.ToJSON().Candidate)
+	fmt.Println(string(payload))
 	resp, err := http.Post(fmt.Sprintf("http://%s/candidate", addr), "application/json; charset=utf-8", bytes.NewReader(payload)) //nolint:noctx
 	if err != nil {
 		return err
@@ -81,6 +82,7 @@ func main() { //nolint:gocognit
 	// candidates which may be slower
 	http.HandleFunc("/candidate", func(w http.ResponseWriter, r *http.Request) {
 		candidate, candidateErr := ioutil.ReadAll(r.Body)
+		fmt.Println(string(candidate))
 		if candidateErr != nil {
 			panic(candidateErr)
 		}

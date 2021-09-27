@@ -111,6 +111,9 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
+		fmt.Println(string(payload))
+
 		resp, err := http.Post(fmt.Sprintf("http://%s/sdp", *offerAddr), "application/json; charset=utf-8", bytes.NewReader(payload)) // nolint:noctx
 		if err != nil {
 			panic(err)

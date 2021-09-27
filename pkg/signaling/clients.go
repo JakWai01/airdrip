@@ -114,8 +114,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		})
 	})
 
-	// var partnerMac string
-
 	if err := wsjson.Write(context.Background(), conn, api.NewApplication(communityKey, macKey)); err != nil {
 		log.Fatal(err)
 	}
