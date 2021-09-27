@@ -135,19 +135,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				}
 
 				// We need to assign this
-				var senderMac string
-
-				if len(s.communities[community]) == 2 {
-					if offer.Mac == s.communities[community][1] {
-						// The second one is sender
-						senderMac = s.communities[community][0]
-					} else {
-						// First one
-						senderMac = s.communities[community][1]
-					}
-				} else {
-					senderMac = s.communities[community][1]
-				}
+				senderMac := s.getSenderMac(offer.Mac, community)
 
 				if err := wsjson.Write(context.Background(), &receiver, api.NewOffer(senderMac, offer.Payload)); err != nil {
 					log.Fatal(err)
@@ -167,19 +155,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 					log.Fatal(err)
 				}
 
-				var senderMac string
-
-				if len(s.communities[community]) == 2 {
-					if answer.Mac == s.communities[community][1] {
-						// The second one is sender
-						senderMac = s.communities[community][0]
-					} else {
-						// First one
-						senderMac = s.communities[community][1]
-					}
-				} else {
-					senderMac = s.communities[community][1]
-				}
+				senderMac := s.getSenderMac(answer.Mac, community)
 
 				if err := wsjson.Write(context.Background(), &receiver, api.NewAnswer(senderMac, answer.Payload)); err != nil {
 					log.Fatal(err)
@@ -200,19 +176,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 					log.Fatal(err)
 				}
 
-				var senderMac string
-
-				if len(s.communities[community]) == 2 {
-					if candidate.Mac == s.communities[community][1] {
-						// The second one is sender
-						senderMac = s.communities[community][0]
-					} else {
-						// First one
-						senderMac = s.communities[community][1]
-					}
-				} else {
-					senderMac = s.communities[community][1]
-				}
+				senderMac := s.getSenderMac(candidate.Mac, community)
 
 				if err := wsjson.Write(context.Background(), &receiver, api.NewCandidate(senderMac, candidate.Payload)); err != nil {
 					log.Fatal(err)
