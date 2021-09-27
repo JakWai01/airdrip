@@ -73,19 +73,23 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	// This triggers when WE have a candidate for the other peer, not the other way around
 	// This candidate key needs to be send to the other peer
 	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
+
 		if i == nil {
 			return
+		} else {
+			wg.Wait()
+
+			candidatesMux.Lock()
+			defer candidatesMux.Unlock()
+
+			desc := peerConnection.RemoteDescription()
+			if desc == nil {
+				pendingCandidates = append(pendingCandidates, i)
+			} else if err := wsjson.Write(context.Background(), conn, api.NewCandidate(macKey, i.ToJSON().Candidate)); err != nil {
+				log.Fatal(err)
+			}
 		}
 
-		candidatesMux.Lock()
-		defer candidatesMux.Unlock()
-
-		desc := peerConnection.RemoteDescription()
-		if desc == nil {
-			pendingCandidates = append(pendingCandidates, i)
-		} else if err := wsjson.Write(context.Background(), conn, api.NewCandidate(macKey, i.ToJSON().Candidate)); err != nil {
-			log.Fatal(err)
-		}
 	})
 
 	// Register data channel creation handling
@@ -256,9 +260,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			candidate_val.Candidate = string(candidate.Payload)
 
 			if peerConnection.RemoteDescription() != nil {
-				err = peerConnection.AddICECandidate(candidate_val)
-
-				if err != nil {
+				if err := peerConnection.AddICECandidate(candidate_val); err != nil {
 					log.Fatal(err)
 				}
 			}
