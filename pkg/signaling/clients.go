@@ -50,6 +50,12 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	var candidatesMux sync.Mutex
+
+	// Introduce pending candidates. When a remote description is not set yet, the candidates will be cached
+	// until a later invocation of the function
+	pendingCandidates := make([]*webrtc.ICECandidate, 0)
+
 	// Set the handler for peer connection state
 	// This will notify you when the peer has connected/disconnected
 	peerConnection.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
@@ -67,16 +73,18 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	// This triggers when WE have a candidate for the other peer, not the other way around
 	// This candidate key needs to be send to the other peer
 	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
-		// If nil isn't checked here, the program will throw a SEGFAULT at the end of conversation (as specified in: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/onicecandidate)
-		log.Printf("Candidate generated for mac %v", macKey)
-		if i != nil {
-			wg.Wait()
+		if i == nil {
+			return
+		}
 
-			if err := wsjson.Write(context.Background(), conn, api.NewCandidate(macKey, i.ToJSON().Candidate)); err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			log.Println("Candidate was nil")
+		candidatesMux.Lock()
+		defer candidatesMux.Unlock()
+
+		desc := peerConnection.RemoteDescription()
+		if desc == nil {
+			pendingCandidates = append(pendingCandidates, i)
+		} else if err := wsjson.Write(context.Background(), conn, api.NewCandidate(macKey, i.ToJSON().Candidate)); err != nil {
+			log.Fatal(err)
 		}
 	})
 
@@ -192,7 +200,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			partnerMac := offer.Mac
 
 			offer_val := webrtc.SessionDescription{}
-			offer_val.SDP = offer.Payload
+			offer_val.SDP = string(offer.Payload)
 			offer_val.Type = webrtc.SDPTypeOffer
 
 			if err := peerConnection.SetRemoteDescription(offer_val); err != nil {
@@ -222,11 +230,20 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			}
 
 			answer_val := webrtc.SessionDescription{}
-			answer_val.SDP = answer.Payload
+			answer_val.SDP = string(answer.Payload)
 			answer_val.Type = webrtc.SDPTypeAnswer
 
 			if err := peerConnection.SetRemoteDescription(answer_val); err != nil {
 				log.Fatal(err)
+			}
+
+			// Add pending candidates if there are any
+			if len(pendingCandidates) > 0 {
+				for _, candidate := range pendingCandidates {
+					if err := peerConnection.AddICECandidate(candidate.ToJSON()); err != nil {
+						log.Fatal(err)
+					}
+				}
 			}
 
 			wg.Done()
@@ -238,7 +255,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			}
 
 			candidate_val := webrtc.ICECandidateInit{}
-			candidate_val.Candidate = candidate.Payload
+			candidate_val.Candidate = string(candidate.Payload)
 
 			if peerConnection.RemoteDescription() != nil {
 				err = peerConnection.AddICECandidate(candidate_val)
