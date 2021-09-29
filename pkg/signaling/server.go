@@ -169,15 +169,15 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 					panic(err)
 				}
 
-				// Get connection of the target and send him the payload
-				target := s.connections[candidate.Mac]
-
 				community, err := s.getCommunity(candidate.Mac)
 				if err != nil {
 					panic(err)
 				}
 
 				candidate.Mac = s.getSenderMac(candidate.Mac, community)
+
+				// Get connection of the target and send him the payload
+				target := s.connections[candidate.Mac]
 
 				if err := wsjson.Write(context.Background(), &target, candidate); err != nil {
 					panic(err)
