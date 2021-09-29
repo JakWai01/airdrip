@@ -4,15 +4,12 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"reflect"
-
-	"nhooyr.io/websocket"
 )
 
-func (s *SignalingServer) getCommunity(conn websocket.Conn) (string, error) {
+func (s *SignalingServer) getCommunity(mac string) (string, error) {
 	for key, element := range s.communities {
 		for i := 0; i < len(element); i++ {
-			if reflect.DeepEqual(element[i], conn) {
+			if element[i] == mac {
 				return key, nil
 			}
 		}
@@ -46,4 +43,18 @@ func asSha256(o interface{}) string {
 	h.Write([]byte(fmt.Sprintf("%v", o)))
 
 	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func (s *SignalingServer) getSenderMac(receiverMac string, community string) string {
+	if len(s.communities[community]) == 2 {
+		if receiverMac == s.communities[community][1] {
+			// The second one is sender
+			return s.communities[community][0]
+		} else {
+			// First one
+			return s.communities[community][1]
+		}
+	} else {
+		return s.communities[community][1]
+	}
 }

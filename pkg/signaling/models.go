@@ -7,9 +7,11 @@ import (
 )
 
 type SignalingServer struct {
-	lock        sync.Mutex
-	communities map[string][]websocket.Conn
-	ready       map[string]int
+	lock           sync.Mutex
+	communities    map[string][]string
+	macs           map[string]bool
+	connections    map[string]websocket.Conn
+	candidateCache []string
 }
 
 type SignalingClient struct{}
