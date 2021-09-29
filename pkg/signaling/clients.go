@@ -87,11 +87,9 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				return
 			} else {
 				// wg.Wait()
-				log.Println("WAITING FOR LOCK")
 				candidatesMux.Lock()
 				defer func() {
 					candidatesMux.Unlock()
-					log.Println("UNLOCKED")
 				}()
 
 				desc := peerConnection.RemoteDescription()
