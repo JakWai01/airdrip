@@ -27,19 +27,19 @@ type Introduction struct {
 type Offer struct {
 	Message
 	Mac     string `json:"mac"`
-	Payload string `json:"payload"`
+	Payload []byte `json:"payload"`
 }
 
 type Answer struct {
 	Message
 	Mac     string `json:"mac"`
-	Payload string `json:"payload"`
+	Payload []byte `json:"payload"`
 }
 
 type Candidate struct {
 	Message
 	Mac     string `json:"mac"`
-	Payload string `json:"payload"`
+	Payload []byte `json:"payload"`
 }
 
 type Exited struct {
@@ -72,15 +72,15 @@ func NewIntroduction(mac string) *Introduction {
 	return &Introduction{Message: Message{OpcodeIntroduction}, Mac: mac}
 }
 
-func NewOffer(mac string, payload string) *Offer {
+func NewOffer(mac string, payload []byte) *Offer {
 	return &Offer{Message: Message{OpcodeOffer}, Mac: mac, Payload: payload}
 }
 
-func NewAnswer(mac string, payload string) *Answer {
+func NewAnswer(mac string, payload []byte) *Answer {
 	return &Answer{Message: Message{OpcodeAnswer}, Mac: mac, Payload: payload}
 }
 
-func NewCandidate(mac string, payload string) *Candidate {
+func NewCandidate(mac string, payload []byte) *Candidate {
 	return &Candidate{Message: Message{OpcodeCandidate}, Mac: mac, Payload: payload}
 }
 

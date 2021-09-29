@@ -1,0 +1,33 @@
+title airdrip Signaling Protocol
+
+participant C1
+participant S
+participant C2
+
+C1 --> S: Application(community: "a")
+S --> C1: Rejection() 
+
+C1 --> S: Application(community: "a")
+S --> C1: Acceptance()
+C1 --> S: Ready()
+
+C2 --> S: Application(community: "a")
+S --> C1: Acceptance()
+C2 --> S: Ready()
+
+S --> C1: Introduction()
+
+C1 --> S: Offer(payload: "asdf")
+S --> C2: Offer(payload: "asdf")
+C2 --> S: Answer(payload: "asdf")
+S --> C1: Answer(payload: "asdf")
+
+C1 --> S: Candidate(payload: "asdf")
+S --> C2: Candidate(payload: "asdf")
+C2 --> S: Candidate(payload: "asdf")
+S --> C1: Candidate(payload: "asdf")
+
+C1 --> S: Exited()
+S --> C2: Resignation()
+
+

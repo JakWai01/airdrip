@@ -34,7 +34,7 @@ var clientCmd = &cobra.Command{
 		for {
 			select {
 			case err := <-fatal:
-				log.Fatal(err)
+				panic(err)
 			case <-done:
 				os.Exit(0)
 			}

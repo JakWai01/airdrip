@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
 	"nhooyr.io/websocket"
@@ -31,15 +30,15 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			// Read message from connection
 			_, data, err := conn.Read(context.Background())
 			if err != nil {
-				log.Fatal(err)
+				panic(err)
 			}
 
-			fmt.Println(string(data))
+			fmt.Println("RECEIVING", string(data))
 
 			// Parse message
 			var v api.Message
 			if err := json.Unmarshal(data, &v); err != nil {
-				log.Fatal(err)
+				panic(err)
 			}
 
 			// Handle different message types
@@ -47,7 +46,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			case api.OpcodeApplication:
 				var application api.Application
 				if err := json.Unmarshal(data, &application); err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
 				if _, ok := s.macs[application.Mac]; ok {
@@ -55,7 +54,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 					// Check if this conn is correct
 					if err := wsjson.Write(context.Background(), &conn, api.NewRejection()); err != nil {
-						log.Fatal(err)
+						panic(err)
 					}
 					break
 				}
@@ -67,7 +66,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 					if len(val) >= 2 {
 						// Send Rejection. This community is full
 						if err := wsjson.Write(context.Background(), &conn, api.NewRejection()); err != nil {
-							log.Fatal(err)
+							panic(err)
 						}
 
 						break
@@ -78,7 +77,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 						s.macs[application.Mac] = false
 
 						if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
-							log.Fatal(err)
+							panic(err)
 						}
 
 						break
@@ -90,7 +89,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 					s.macs[application.Mac] = false
 
 					if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
-						log.Fatal(err)
+						panic(err)
 					}
 					break
 				}
@@ -98,7 +97,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			case api.OpcodeReady:
 				var ready api.Ready
 				if err := json.Unmarshal(data, &ready); err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
 				// If we receive ready, mark the sending person as ready and check if both are ready. Loop through all communities to get the community the person is in.
@@ -107,14 +106,14 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				// Loop thorugh all members of the community and thorugh all elements in it. If the mac isn't member of a community, this will panic.
 				community, err := s.getCommunity(ready.Mac)
 				if err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
 				if len(s.communities[community]) == 2 {
 					if s.macs[s.communities[community][0]] == true && s.macs[s.communities[community][1]] == true {
 						// Send an introduction to the peer containing the address of the first peer.
 						if err := wsjson.Write(context.Background(), &conn, api.NewIntroduction(s.communities[community][0])); err != nil {
-							log.Fatal(err)
+							panic(err)
 						}
 						break
 					}
@@ -123,7 +122,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			case api.OpcodeOffer:
 				var offer api.Offer
 				if err := json.Unmarshal(data, &offer); err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
 				// Get the connection of the receiver and send him the payload
@@ -131,20 +130,22 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 				community, err := s.getCommunity(offer.Mac)
 				if err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
 				// We need to assign this
-				senderMac := s.getSenderMac(offer.Mac, community)
+				offer.Mac = s.getSenderMac(offer.Mac, community)
 
-				if err := wsjson.Write(context.Background(), &receiver, api.NewOffer(senderMac, offer.Payload)); err != nil {
-					log.Fatal(err)
+				fmt.Println("SENDING", offer)
+
+				if err := wsjson.Write(context.Background(), &receiver, offer); err != nil {
+					panic(err)
 				}
 				break
 			case api.OpcodeAnswer:
 				var answer api.Answer
 				if err := json.Unmarshal(data, &answer); err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
 				// Get connection of the receiver and send him the payload
@@ -152,41 +153,41 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 				community, err := s.getCommunity(answer.Mac)
 				if err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
-				senderMac := s.getSenderMac(answer.Mac, community)
+				answer.Mac = s.getSenderMac(answer.Mac, community)
 
-				if err := wsjson.Write(context.Background(), &receiver, api.NewAnswer(senderMac, answer.Payload)); err != nil {
-					log.Fatal(err)
+				if err := wsjson.Write(context.Background(), &receiver, answer); err != nil {
+					panic(err)
 				}
 
 				break
 			case api.OpcodeCandidate:
 				var candidate api.Candidate
 				if err := json.Unmarshal(data, &candidate); err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
-				// Get connection of the receiver and send him the payload
-				receiver := s.connections[candidate.Mac]
+				// Get connection of the target and send him the payload
+				target := s.connections[candidate.Mac]
 
 				community, err := s.getCommunity(candidate.Mac)
 				if err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
-				senderMac := s.getSenderMac(candidate.Mac, community)
+				candidate.Mac = s.getSenderMac(candidate.Mac, community)
 
-				if err := wsjson.Write(context.Background(), &receiver, api.NewCandidate(senderMac, candidate.Payload)); err != nil {
-					log.Fatal(err)
+				if err := wsjson.Write(context.Background(), &target, candidate); err != nil {
+					panic(err)
 				}
 
 				break
 			case api.OpcodeExited:
 				var exited api.Exited
 				if err := json.Unmarshal(data, &exited); err != nil {
-					log.Fatal(err)
+					panic(err)
 				}
 
 				var receiver websocket.Conn
@@ -211,7 +212,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 				// Send to the other peer
 				if err := wsjson.Write(context.Background(), &receiver, api.NewResignation(exited.Mac)); err != nil {
-					log.Fatal()
+					panic(err)
 				}
 
 				// Remove this peer from all maps
@@ -232,4 +233,19 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			}
 		}
 	}()
+}
+
+func (s *SignalingServer) Close() []error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	errors := []error{}
+
+	for _, peer := range s.connections {
+		if err := peer.Close(websocket.StatusGoingAway, "shutting down"); err != nil {
+			errors = append(errors, err)
+		}
+	}
+
+	return errors
 }
