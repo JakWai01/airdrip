@@ -1,137 +1,110 @@
 package signaling
 
 import (
-	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
-	"net"
-	"strings"
+
+	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 // This signaling protocol is heavily inspired by the weron project created by @pojntfx
 // Take a look at the specification by clicking the following link: https://github.com/pojntfx/weron/blob/main/docs/signaling-protocol.txt#L12
 
-// func NewSignalingServer() *SignalingServer {
-// 	return &SignalingServer{
-// 		communities:    map[string][]string{},
-// 		macs:           map[string]bool{},
-// 		connections:    map[string]net.Conn{},
-// 		candidateCache: []string{},
-// 	}
-// }
+func NewSignalingServer() *SignalingServer {
+	return &SignalingServer{
+		communities:    map[string][]string{},
+		macs:           map[string]bool{},
+		connections:    map[string]websocket.Conn{},
+		candidateCache: []string{},
+	}
+}
 
-// Method of the type SignalingServer
-func (s *SignalingServer) HandleConn(c net.Conn) {
-
-	fatal := make(chan error)
+func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 	go func() {
 		for {
+
 			// Read message from connection
-			message, err := bufio.NewReader(c).ReadString('\n')
-			if err != nil {
-				fatal <- err
-
-				return
-			}
-
-			fmt.Println(message)
-
-			values := make(map[string]json.RawMessage)
-
-			// Parse message
-			err = json.Unmarshal([]byte(message), &values)
+			_, data, err := conn.Read(context.Background())
 			if err != nil {
 				panic(err)
 			}
 
-			switch Opcode(strings.ReplaceAll(string(values["opcode"]), "\"", "")) {
-			case application:
-				var opcode Application
+			fmt.Println("RECEIVING", string(data))
 
-				err := json.Unmarshal([]byte(message), &opcode)
-				if err != nil {
+			// Parse message
+			var v api.Message
+			if err := json.Unmarshal(data, &v); err != nil {
+				panic(err)
+			}
+
+			// Handle different message types
+			switch v.Opcode {
+			case api.OpcodeApplication:
+				var application api.Application
+				if err := json.Unmarshal(data, &application); err != nil {
 					panic(err)
 				}
 
-				if _, ok := s.macs[opcode.Mac]; ok {
-					// Send Rejection. That Mac is already contained
-					byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
-					if err != nil {
-						panic(err)
-					}
+				if _, ok := s.macs[application.Mac]; ok {
+					// Send rejection. That mac is already contained
 
-					_, err = c.Write(byteArray)
-					if err != nil {
+					// Check if this conn is correct
+					if err := wsjson.Write(context.Background(), &conn, api.NewRejection()); err != nil {
 						panic(err)
 					}
 					break
 				}
 
-				s.connections[opcode.Mac] = c
+				s.connections[application.Mac] = conn
 
 				// Check if community exists and if there are less than 2 members inside
-				if val, ok := s.communities[opcode.Community]; ok {
+				if val, ok := s.communities[application.Community]; ok {
 					if len(val) >= 2 {
 						// Send Rejection. This community is full
-						byteArray, err := json.Marshal(Rejection{Opcode: string(rejection)})
-						if err != nil {
+						if err := wsjson.Write(context.Background(), &conn, api.NewRejection()); err != nil {
 							panic(err)
 						}
 
-						_, err = c.Write(byteArray)
-						if err != nil {
-							panic(err)
-						}
 						break
 					} else {
-						// Community exists but has less than 2 values in it
-						s.communities[opcode.Community] = append(s.communities[opcode.Community], opcode.Mac)
+						// Community exists and has less than 2 members inside
+						s.communities[application.Community] = append(s.communities[application.Community], application.Mac)
 
-						s.macs[opcode.Mac] = false
+						s.macs[application.Mac] = false
 
-						byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
-						if err != nil {
+						if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
 							panic(err)
 						}
 
-						_, err = c.Write(byteArray)
-						if err != nil {
-							panic(err)
-						}
 						break
 					}
 				} else {
 					// Community does not exist. Create community and insert mac
-					s.communities[opcode.Community] = append(s.communities[opcode.Community], opcode.Mac)
+					s.communities[application.Community] = append(s.communities[application.Community], application.Mac)
 
-					s.macs[opcode.Mac] = false
+					s.macs[application.Mac] = false
 
-					byteArray, err := json.Marshal(Acceptance{Opcode: string(acceptance)})
-					if err != nil {
-						panic(err)
-					}
-
-					_, err = c.Write(byteArray)
-					if err != nil {
+					if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
 						panic(err)
 					}
 					break
 				}
 
-			case ready:
-				var opcode Ready
-
-				err := json.Unmarshal([]byte(message), &opcode)
-				if err != nil {
+			case api.OpcodeReady:
+				var ready api.Ready
+				if err := json.Unmarshal(data, &ready); err != nil {
 					panic(err)
 				}
 
 				// If we receive ready, mark the sending person as ready and check if both are ready. Loop through all communities to get the community the person is in.
-				s.macs[opcode.Mac] = true
+				s.macs[ready.Mac] = true
 
-				// Loop through all members of the community and through all elements in it. If the mac isn't member of a community, this will panic.
-				community, err := s.getCommunity(opcode.Mac)
+				// Loop thorugh all members of the community and thorugh all elements in it. If the mac isn't member of a community, this will panic.
+				community, err := s.getCommunity(ready.Mac)
 				if err != nil {
 					panic(err)
 				}
@@ -139,144 +112,94 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 				if len(s.communities[community]) == 2 {
 					if s.macs[s.communities[community][0]] == true && s.macs[s.communities[community][1]] == true {
 						// Send an introduction to the peer containing the address of the first peer.
-						byteArray, err := json.Marshal(Introduction{Opcode: string(introduction), Mac: s.communities[community][0]})
-						if err != nil {
-							panic(err)
-						}
-
-						_, err = c.Write(byteArray)
-						if err != nil {
+						if err := wsjson.Write(context.Background(), &conn, api.NewIntroduction(s.communities[community][0])); err != nil {
 							panic(err)
 						}
 						break
-
 					}
 				}
-
 				break
-			case offer:
-				var opcode Offer
+			case api.OpcodeOffer:
+				var offer api.Offer
+				if err := json.Unmarshal(data, &offer); err != nil {
+					panic(err)
+				}
 
-				err := json.Unmarshal([]byte(message), &opcode)
+				// Get the connection of the receiver and send him the payload
+				receiver := s.connections[offer.Mac]
+
+				community, err := s.getCommunity(offer.Mac)
 				if err != nil {
 					panic(err)
 				}
 
-				// Get connection of the reveiver and send him the payload
-				receiver := s.connections[opcode.Mac]
+				// We need to assign this
+				offer.Mac = s.getSenderMac(offer.Mac, community)
 
-				var senderMac string
-				// Get the Mac based on the current connection out of the connections mac
-				for key, val := range s.connections {
-					if c == val {
-						senderMac = key
-					}
-				}
+				fmt.Println("SENDING", offer)
 
-				byteArray, err := json.Marshal(Offer{Opcode: string(offer), Mac: senderMac, Payload: opcode.Payload})
-				if err != nil {
-					panic(err)
-				}
-
-				_, err = receiver.Write(byteArray)
-				if err != nil {
+				if err := wsjson.Write(context.Background(), &receiver, offer); err != nil {
 					panic(err)
 				}
 				break
-			case answer:
-				var opcode Answer
-
-				err := json.Unmarshal([]byte(message), &opcode)
-				if err != nil {
+			case api.OpcodeAnswer:
+				var answer api.Answer
+				if err := json.Unmarshal(data, &answer); err != nil {
 					panic(err)
 				}
 
 				// Get connection of the receiver and send him the payload
-				receiver := s.connections[opcode.Mac]
+				receiver := s.connections[answer.Mac]
 
-				var senderMac string
-				// Get the Mac based on the current connection out of the connections mac
-				for key, val := range s.connections {
-					if c == val {
-						senderMac = key
-					}
-				}
-
-				byteArray, err := json.Marshal(Answer{Opcode: string(answer), Mac: senderMac, Payload: opcode.Payload})
+				community, err := s.getCommunity(answer.Mac)
 				if err != nil {
 					panic(err)
 				}
 
-				_, err = receiver.Write(byteArray)
-				if err != nil {
+				answer.Mac = s.getSenderMac(answer.Mac, community)
+
+				if err := wsjson.Write(context.Background(), &receiver, answer); err != nil {
 					panic(err)
 				}
 
 				break
-			case candidate:
-				var opcode Candidate
+			case api.OpcodeCandidate:
+				var candidate api.Candidate
+				if err := json.Unmarshal(data, &candidate); err != nil {
+					panic(err)
+				}
 
-				err := json.Unmarshal([]byte(message), &opcode)
+				// Get connection of the target and send him the payload
+				target := s.connections[candidate.Mac]
+
+				community, err := s.getCommunity(candidate.Mac)
 				if err != nil {
 					panic(err)
 				}
 
-				// Get connection of the receiver and send him the payload
-				receiver := s.connections[opcode.Mac]
+				candidate.Mac = s.getSenderMac(candidate.Mac, community)
 
-				var senderMac string
-				// Get the Mac based on the current connection out of the connections mac
-				for key, val := range s.connections {
-					if c == val {
-						senderMac = key
-					}
-				}
-
-				byteArray, err := json.Marshal(Candidate{Opcode: string(candidate), Mac: senderMac, Payload: opcode.Payload})
-				if err != nil {
-					panic(err)
-				}
-
-				// Only write if we haven't written yet
-				s.candidateCache = append(s.candidateCache, opcode.Mac)
-
-				_, err = receiver.Write(byteArray)
-				if err != nil {
+				if err := wsjson.Write(context.Background(), &target, candidate); err != nil {
 					panic(err)
 				}
 
 				break
-
-			case exited:
-				var opcode Exited
-
-				err := json.Unmarshal([]byte(message), &opcode)
-				if err != nil {
+			case api.OpcodeExited:
+				var exited api.Exited
+				if err := json.Unmarshal(data, &exited); err != nil {
 					panic(err)
 				}
 
-				var senderMac string
-				// Get the Mac based on the current connection out of the connections mac
-				for key, val := range s.connections {
-					if c == val {
-						senderMac = key
-					}
-				}
-
-				byteArray, err := json.Marshal(Resignation{Opcode: string(resignation), Mac: senderMac})
-				if err != nil {
-					panic(err)
-				}
-				var receiver net.Conn
+				var receiver websocket.Conn
 
 				// Get the other peer in the community
-				community, err := s.getCommunity(senderMac)
+				community, err := s.getCommunity(exited.Mac)
 				if err != nil {
 					panic(err)
 				}
 
 				if len(s.communities[community]) == 2 {
-					if senderMac == s.communities[community][0] {
+					if exited.Mac == s.communities[community][0] {
 						// The second one is receiver
 						receiver = s.connections[s.communities[community][1]]
 					} else {
@@ -288,17 +211,16 @@ func (s *SignalingServer) HandleConn(c net.Conn) {
 				}
 
 				// Send to the other peer
-				_, err = receiver.Write(byteArray)
-				if err != nil {
+				if err := wsjson.Write(context.Background(), &receiver, api.NewResignation(exited.Mac)); err != nil {
 					panic(err)
 				}
 
 				// Remove this peer from all maps
-				delete(s.macs, senderMac)
-				delete(s.connections, senderMac)
+				delete(s.macs, exited.Mac)
+				delete(s.connections, exited.Mac)
 
-				// Remove member from community
-				s.communities[community] = deleteElement(s.communities[community], senderMac)
+				// Remove meber from community
+				s.communities[community] = deleteElement(s.communities[community], exited.Mac)
 
 				// Remove community only if there is only one member left
 				if len(s.communities[community]) == 0 {
@@ -319,8 +241,8 @@ func (s *SignalingServer) Close() []error {
 
 	errors := []error{}
 
-	for _, conn := range s.connections {
-		if err := conn.Close(); err != nil {
+	for _, peer := range s.connections {
+		if err := peer.Close(websocket.StatusGoingAway, "shutting down"); err != nil {
 			errors = append(errors, err)
 		}
 	}

@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/JakWai01/airdrip/pkg/signaling"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -23,11 +22,11 @@ var clientCmd = &cobra.Command{
 		fatal := make(chan error)
 		done := make(chan struct{})
 
-		client := signaling.NewSignalingClient()
+		// client := signaling.NewSignalingClient()
 
 		go func() {
 
-			go client.HandleConn(viper.GetString(laddrKey), viper.GetString(communityKey), viper.GetString(macKey))
+			// go client.HandleConn(viper.GetString(laddrKey), viper.GetString(communityKey), viper.GetString(macKey))
 
 		}()
 
