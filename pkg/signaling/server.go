@@ -3,7 +3,6 @@ package signaling
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
 	"nhooyr.io/websocket"
@@ -15,10 +14,9 @@ import (
 
 func NewSignalingServer() *SignalingServer {
 	return &SignalingServer{
-		communities:    map[string][]string{},
-		macs:           map[string]bool{},
-		connections:    map[string]websocket.Conn{},
-		candidateCache: []string{},
+		communities: map[string][]string{},
+		macs:        map[string]bool{},
+		connections: map[string]websocket.Conn{},
 	}
 }
 
@@ -32,8 +30,6 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			if err != nil {
 				panic(err)
 			}
-
-			fmt.Println("RECEIVING", string(data))
 
 			// Parse message
 			var v api.Message
@@ -73,7 +69,6 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 					} else {
 						// Community exists and has less than 2 members inside
 						s.communities[application.Community] = append(s.communities[application.Community], application.Mac)
-
 						s.macs[application.Mac] = false
 
 						if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
@@ -85,7 +80,6 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				} else {
 					// Community does not exist. Create community and insert mac
 					s.communities[application.Community] = append(s.communities[application.Community], application.Mac)
-
 					s.macs[application.Mac] = false
 
 					if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
@@ -136,8 +130,6 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				// We need to assign this
 				offer.Mac = s.getSenderMac(offer.Mac, community)
 
-				fmt.Println("SENDING", offer)
-
 				if err := wsjson.Write(context.Background(), &receiver, offer); err != nil {
 					panic(err)
 				}
@@ -176,7 +168,6 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 				candidate.Mac = s.getSenderMac(candidate.Mac, community)
 
-				// Get connection of the target and send him the payload
 				target := s.connections[candidate.Mac]
 
 				if err := wsjson.Write(context.Background(), &target, candidate); err != nil {

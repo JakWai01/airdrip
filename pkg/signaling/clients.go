@@ -1,14 +1,8 @@
 package signaling
 
-// Fix candidate exchange (Mac exchange)
-// Neue Signaling Protocol ohne Mac ((nur conns pro community persistieren)
-// Candidate Handling schritt fuer schritt
-
 import (
 	"context"
-	b64 "encoding/base64"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -94,14 +88,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 				desc := peerConnection.RemoteDescription()
 
-				log.Println("SENDING SENDING")
-				log.Println(b64.StdEncoding.EncodeToString([]byte(i.ToJSON().Candidate)))
-
-				// data, err := json.Marshal(i)
-				// if err != nil {
-				// 	panic(err)
-				// }
-
 				if desc == nil {
 					pendingCandidates = append(pendingCandidates, i)
 					// Hier muss glaub ich die andere Mac gesendet werden
@@ -114,8 +100,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 		// Register data channel creation handling
 		peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
-
-			log.Println("OnDataChannel")
 			// Register channel opening handling
 			d.OnOpen(func() {
 				log.Printf("Data channel '%s'-'%d' open. Messages will now be send to any connected DataChannels every 5 seconds\n", d.Label(), d.ID())
@@ -164,8 +148,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				panic(err)
 			}
 
-			log.Println(string(data))
-
 			// Parse message
 			var v api.Message
 			if err := json.Unmarshal(data, &v); err != nil {
@@ -211,14 +193,10 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 					panic(err)
 				}
 
-				fmt.Println("OFFER", offer)
-
 				data, err := json.Marshal(offer)
 				if err != nil {
 					panic(err)
 				}
-
-				fmt.Println("SENDING", string(data))
 
 				if err := wsjson.Write(context.Background(), conn, api.NewOffer(data, partnerMac)); err != nil {
 					panic(err)
@@ -231,7 +209,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 					panic(err)
 				}
 
-				fmt.Println("GOT OFFER", string(offer.Payload))
 				partnerMac := offer.Mac
 
 				var offer_val webrtc.SessionDescription
@@ -246,29 +223,17 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 				go func() {
 					for candidate := range candidates {
-						log.Println("Candidate", candidate)
-
 						if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: candidate}); err != nil {
 							panic(err)
 						}
 					}
 				}()
 
-				// Add pending candidates if there are any
-				// if len(pendingCandidates) > 0 {
-				// 	for _, candidate := range pendingCandidates {
-				// 		if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: candidate.ToJSON().Candidate}); err != nil {
-				// 			panic(err)
-				// 		}
-				// 	}
-				// }
-
 				answer_val, err := peerConnection.CreateAnswer(nil)
 				if err != nil {
 					panic(err)
 				}
 
-				fmt.Println("SENDING", answer_val)
 				err = peerConnection.SetLocalDescription(answer_val)
 				if err != nil {
 					panic(err)
@@ -279,7 +244,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 					panic(err)
 				}
 
-				// ALskdjlakjsdkla
 				if err := wsjson.Write(context.Background(), conn, api.NewAnswer(data, partnerMac)); err != nil {
 					panic(err)
 				}
@@ -292,10 +256,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 					panic(err)
 				}
 
-				fmt.Println("GOT ANSWER", string(answer.Payload))
-				// answer_val := webrtc.SessionDescription{}
-				// answer_val.SDP = string(answer.Payload)
-				// answer_val.Type = webrtc.SDPTypeAnswer
 				var answer_val webrtc.SessionDescription
 
 				if err := json.Unmarshal([]byte(answer.Payload), &answer_val); err != nil {
@@ -306,15 +266,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 					panic(err)
 				}
 
-				// Add pending candidates if there are any
-				// if len(pendingCandidates) > 0 {
-				// 	for _, candidate := range pendingCandidates {
-				// 		if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: candidate.ToJSON().Candidate}); err != nil {
-				// 			panic(err)
-				// 		}
-				// 	}
-				// }
-
 				wg.Done()
 				break
 			case api.OpcodeCandidate:
@@ -322,12 +273,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				if err := json.Unmarshal(data, &candidate); err != nil {
 					panic(err)
 				}
-
-				// if peerConnection.RemoteDescription() != nil {
-				// 	if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: string(candidate.Payload)}); err != nil {
-				// 		panic(err)
-				// 	}
-				// }
 
 				go func() {
 					candidates <- string(candidate.Payload)
@@ -343,7 +288,5 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			}
 		}
 	}()
-
 	select {}
-
 }
