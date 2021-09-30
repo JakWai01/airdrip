@@ -14,3 +14,8 @@ type SignalingServer struct {
 }
 
 type SignalingClient struct{}
+
+type File struct {
+	Name    string `json:"name"`
+	Payload []byte `json:"payload"`
+}

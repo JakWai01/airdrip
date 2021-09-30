@@ -3,12 +3,12 @@ package signaling
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
 	"github.com/pion/webrtc/v3"
@@ -25,7 +25,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	if error != nil {
 		panic(error)
 	}
-	defer conn.Close(websocket.StatusInternalError, "the sky is falling")
+	defer conn.Close(websocket.StatusNormalClosure, "Closing websocket connection nominally")
 
 	// Prepare configuration
 	var config = webrtc.Configuration{
@@ -104,22 +104,47 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			d.OnOpen(func() {
 				log.Printf("Data channel '%s'-'%d' open. Messages will now be send to any connected DataChannels every 5 seconds\n", d.Label(), d.ID())
 
-				for range time.NewTicker(5 * time.Second).C {
-					message := "Hello, World!"
-					log.Printf("Sending '%s'\n", message)
+				// for range time.NewTicker(5 * time.Second).C {
+				// 	message := "Hello, World!"
+				// 	log.Printf("Sending '%s'\n", message)
 
-					// Send the message as text
-					sendErr := d.SendText(message)
-					if sendErr != nil {
-						panic(sendErr)
-					}
+				// 	// Send the message as text
+				// 	sendErr := d.SendText(message)
+				// 	if sendErr != nil {
+				// 		panic(sendErr)
+				// 	}
+				// }
+
+				data, err := os.ReadFile("file.txt")
+				if err != nil {
+					fmt.Println(err)
+				}
+
+				file := File{
+					Name:    "file.txt",
+					Payload: data,
+				}
+
+				message, err := json.Marshal(file)
+
+				sendErr := d.SendText(string(message))
+				if sendErr != nil {
+					panic(sendErr)
 				}
 			})
 
 			// Register text message handling
-			d.OnMessage(func(msg webrtc.DataChannelMessage) {
-				log.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
-			})
+			// d.OnMessage(func(msg webrtc.DataChannelMessage) {
+			// 	// log.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
+			// 	var file File
+
+			// 	if err := json.Unmarshal(msg.Data, &file); err != nil {
+			// 		panic(err)
+			// 	}
+
+			// 	fmt.Println(file.Name)
+			// 	fmt.Println(file.Payload)
+			// })
 		})
 
 		if err := wsjson.Write(context.Background(), conn, api.NewApplication(communityKey, macKey)); err != nil {
@@ -145,6 +170,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			// Read message from connection
 			_, data, err := conn.Read(context.Background())
 			if err != nil {
+				fmt.Println(peerConnection.ConnectionState())
 				panic(err)
 			}
 
@@ -174,7 +200,26 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 					log.Println("sendChannel has opened")
 				})
 				sendChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
-					log.Printf("Message from DataChannel %s payload %s", sendChannel.Label(), string(msg.Data))
+					// log.Printf("Message from DataChannel %s payload %s", sendChannel.Label(), string(msg.Data))
+
+					var file File
+
+					if err := json.Unmarshal(msg.Data, &file); err != nil {
+						panic(err)
+					}
+
+					// fmt.Println(file.Name)
+					// fmt.Println(string(file.Payload))
+
+					// Write to file
+					err := os.WriteFile(file.Name, file.Payload, 0644)
+					if err != nil {
+						panic(err)
+					}
+
+					defer sendChannel.Close()
+
+					exit <- struct{}{}
 				})
 
 				var introduction api.Introduction
@@ -288,5 +333,5 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			}
 		}
 	}()
-	select {}
+	<-exit
 }

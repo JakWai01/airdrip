@@ -27,3 +27,6 @@ export MAC="124"
 export COMMUNITY="a"
 make client
 ```
+
+## TODO 
+- Add feature to send directories
