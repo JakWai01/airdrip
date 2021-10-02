@@ -64,13 +64,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		peerConnection.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
 			log.Printf("Peer Connection State has changed: %s\n", s.String())
 
-			// if s == webrtc.PeerConnectionStateFailed {
-			// 	// Wait until PeerConnection has had no network activity for 30 seconds or another failure.
-			// 	// Use webrtc.PeerCOnnectionStateDisconnected if you are interested in detecting faster timeout.
-			// 	// Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
-			// 	log.Println("Peer Connection has gone to failed exiting")
-			// }
-
 			exit <- struct{}{}
 		})
 
@@ -105,17 +98,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			d.OnOpen(func() {
 				log.Printf("Data channel '%s'-'%d' open. Messages will now be send to any connected DataChannels every 5 seconds\n", d.Label(), d.ID())
 
-				// for range time.NewTicker(5 * time.Second).C {
-				// 	message := "Hello, World!"
-				// 	log.Printf("Sending '%s'\n", message)
-
-				// 	// Send the message as text
-				// 	sendErr := d.SendText(message)
-				// 	if sendErr != nil {
-				// 		panic(sendErr)
-				// 	}
-				// }
-
 				data, err := os.ReadFile("file.txt")
 				if err != nil {
 					fmt.Println(err)
@@ -136,18 +118,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				exit <- struct{}{}
 			})
 
-			// Register text message handling
-			// d.OnMessage(func(msg webrtc.DataChannelMessage) {
-			// 	// log.Printf("Message from DataChannel '%s': '%s'\n", d.Label(), string(msg.Data))
-			// 	var file File
-
-			// 	if err := json.Unmarshal(msg.Data, &file); err != nil {
-			// 		panic(err)
-			// 	}
-
-			// 	fmt.Println(file.Name)
-			// 	fmt.Println(file.Payload)
-			// })
 		})
 
 		if err := wsjson.Write(context.Background(), conn, api.NewApplication(communityKey, macKey)); err != nil {
@@ -210,9 +180,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 					if err := json.Unmarshal(msg.Data, &file); err != nil {
 						panic(err)
 					}
-
-					// fmt.Println(file.Name)
-					// fmt.Println(string(file.Payload))
 
 					// Write to file
 					err := os.WriteFile(file.Name, file.Payload, 0644)
