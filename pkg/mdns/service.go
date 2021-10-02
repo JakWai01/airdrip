@@ -1,19 +1,28 @@
 package mdns
 
 import (
-	"os"
+	"net"
 
-	"github.com/hashicorp/mdns"
+	"github.com/pion/mdns"
+	"golang.org/x/net/ipv4"
 )
 
 func RunMDNS() {
-	host, _ := os.Hostname()
-	info := []string{"Discovering hosts with MDNS for the airdrip project"}
-	service, _ := mdns.NewMDNSService(host, "_airdrip._tcp", "", "", 8000, nil, info)
+	addr, err := net.ResolveUDPAddr("udp", mdns.DefaultAddress)
+	if err != nil {
+		panic(err)
+	}
 
-	// Create the mDNS server, defer shutdown
-	server, _ := mdns.NewServer(&mdns.Config{Zone: service})
-	defer server.Shutdown()
+	l, err := net.ListenUDP("udp4", addr)
+	if err != nil {
+		panic(err)
+	}
 
+	_, err = mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{
+		LocalNames: []string{"_airdrip.local"},
+	})
+	if err != nil {
+		panic(err)
+	}
 	select {}
 }
