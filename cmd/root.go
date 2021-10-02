@@ -21,4 +21,5 @@ func Execute() {
 func init() {
 	rootCmd.AddCommand(signalCmd)
 	rootCmd.AddCommand(clientCmd)
+	rootCmd.AddCommand(mdnsCmd)
 }
