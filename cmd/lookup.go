@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/JakWai01/airdrip/pkg/mdns"
 	"github.com/spf13/cobra"
@@ -13,7 +15,7 @@ var lookupCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		fatal := make(chan error)
-		done := make(chan struct{})
+		done := make(chan string)
 
 		go func() {
 			go mdns.LookupMDNS(done)
@@ -23,7 +25,10 @@ var lookupCmd = &cobra.Command{
 			select {
 			case err := <-fatal:
 				panic(err)
-			case <-done:
+			case socket := <-done:
+				ip := strings.Split(socket, ":")[0]
+				fmt.Println(ip)
+
 				os.Exit(0)
 			}
 		}

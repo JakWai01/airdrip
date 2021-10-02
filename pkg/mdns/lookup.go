@@ -2,14 +2,13 @@ package mdns
 
 import (
 	"context"
-	"fmt"
 	"net"
 
 	"github.com/pion/mdns"
 	"golang.org/x/net/ipv4"
 )
 
-func LookupMDNS(ch chan struct{}) {
+func LookupMDNS(ch chan string) {
 	addr, err := net.ResolveUDPAddr("udp", mdns.DefaultAddress)
 	if err != nil {
 		panic(err)
@@ -25,8 +24,7 @@ func LookupMDNS(ch chan struct{}) {
 		panic(err)
 	}
 
-	answer, src, err := server.Query(context.TODO(), "_airdrip.local")
-	fmt.Println(src)
-	fmt.Println(answer)
-	ch <- struct{}{}
+	_, src, err := server.Query(context.TODO(), "_airdrip.local")
+
+	ch <- src.String()
 }
