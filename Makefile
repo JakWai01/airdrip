@@ -6,3 +6,6 @@ client:
 
 mdns:
 	go run main.go mdns
+
+lookup:
+	go run main.go lookup

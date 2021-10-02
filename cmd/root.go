@@ -22,4 +22,5 @@ func init() {
 	rootCmd.AddCommand(signalCmd)
 	rootCmd.AddCommand(clientCmd)
 	rootCmd.AddCommand(mdnsCmd)
+	rootCmd.AddCommand(lookupCmd)
 }
