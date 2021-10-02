@@ -41,6 +41,7 @@ var signalCmd = &cobra.Command{
 			})
 
 			http.ListenAndServe(addr.String(), handler)
+
 		}
 	},
 }

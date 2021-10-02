@@ -23,6 +23,7 @@ func NewSignalingServer() *SignalingServer {
 func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 	go func() {
+	loop:
 		for {
 
 			// Read message from connection
@@ -218,7 +219,8 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 					delete(s.communities, community)
 				}
 
-				return
+				// conn.Close(websocket.StatusNormalClosure, "Finished")
+				break loop
 			default:
 				panic("Invalid message. Please use a valid opcode.")
 			}

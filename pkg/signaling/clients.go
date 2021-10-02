@@ -64,13 +64,14 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		peerConnection.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
 			log.Printf("Peer Connection State has changed: %s\n", s.String())
 
-			if s == webrtc.PeerConnectionStateFailed {
-				// Wait until PeerConnection has had no network activity for 30 seconds or another failure.
-				// Use webrtc.PeerCOnnectionStateDisconnected if you are interested in detecting faster timeout.
-				// Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
-				log.Println("Peer Connection has gone to failed exiting")
-				os.Exit(0)
-			}
+			// if s == webrtc.PeerConnectionStateFailed {
+			// 	// Wait until PeerConnection has had no network activity for 30 seconds or another failure.
+			// 	// Use webrtc.PeerCOnnectionStateDisconnected if you are interested in detecting faster timeout.
+			// 	// Note that the PeerConnection may come back from PeerConnectionStateDisconnected.
+			// 	log.Println("Peer Connection has gone to failed exiting")
+			// }
+
+			exit <- struct{}{}
 		})
 
 		// This triggers when WE have a candidate for the other peer, not the other way around
@@ -131,6 +132,8 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				if sendErr != nil {
 					panic(sendErr)
 				}
+
+				exit <- struct{}{}
 			})
 
 			// Register text message handling
@@ -325,13 +328,12 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 				break
 			case api.OpcodeResignation:
-				if err := wsjson.Write(context.Background(), conn, api.NewExited(macKey)); err != nil {
-					panic(err)
-				}
-
-				os.Exit(0)
+				exit <- struct{}{}
 			}
 		}
 	}()
 	<-exit
+	if err := wsjson.Write(context.Background(), conn, api.NewExited(macKey)); err != nil {
+		panic(err)
+	}
 }
