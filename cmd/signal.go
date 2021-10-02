@@ -7,7 +7,12 @@ import (
 
 	"github.com/JakWai01/airdrip/pkg/signaling"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"nhooyr.io/websocket"
+)
+
+const (
+	addressKey = "address"
 )
 
 var signalCmd = &cobra.Command{
@@ -18,14 +23,14 @@ var signalCmd = &cobra.Command{
 		signaler := signaling.NewSignalingServer()
 
 		for {
-			laddr := "localhost:8080"
+			socket := viper.GetString(addressKey) + ":8080"
 
-			addr, err := net.ResolveTCPAddr("tcp", laddr)
+			addr, err := net.ResolveTCPAddr("tcp", socket)
 			if err != nil {
 				panic(err)
 			}
 
-			log.Printf("signaling server listening on %v", laddr)
+			log.Printf("signaling server listening on %v", socket)
 
 			handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 				conn, err := websocket.Accept(rw, r, nil)
@@ -44,4 +49,15 @@ var signalCmd = &cobra.Command{
 
 		}
 	},
+}
+
+func init() {
+	signalCmd.PersistentFlags().String(addressKey, "localhost", "Listen address")
+
+	// Bind env variables
+	if err := viper.BindPFlags(signalCmd.PersistentFlags()); err != nil {
+		log.Fatal("could not bind flags:", err)
+	}
+	viper.SetEnvPrefix("airdrip")
+	viper.AutomaticEnv()
 }

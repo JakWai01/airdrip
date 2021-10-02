@@ -21,7 +21,8 @@ func NewSignalingClient() *SignalingClient {
 }
 
 func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKey string) {
-	conn, _, error := websocket.Dial(context.Background(), "ws://localhost:8080", nil)
+	wsAddress := "ws://" + laddrKey
+	conn, _, error := websocket.Dial(context.Background(), wsAddress, nil)
 	if error != nil {
 		panic(error)
 	}
