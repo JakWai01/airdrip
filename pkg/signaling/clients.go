@@ -64,8 +64,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	go func() {
 		peerConnection.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
 			log.Printf("Peer Connection State has changed: %s\n", s.String())
-
-			exit <- struct{}{}
 		})
 
 		// This triggers when WE have a candidate for the other peer, not the other way around
@@ -115,8 +113,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				if sendErr != nil {
 					panic(sendErr)
 				}
-
-				exit <- struct{}{}
 			})
 
 		})
@@ -183,14 +179,12 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 					}
 
 					// Write to file
-					err := os.WriteFile(file.Name, file.Payload, 0644)
+					err := os.WriteFile("test.txt", file.Payload, 0644)
 					if err != nil {
 						panic(err)
 					}
 
 					defer sendChannel.Close()
-
-					exit <- struct{}{}
 				})
 
 				var introduction api.Introduction
