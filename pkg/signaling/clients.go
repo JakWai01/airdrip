@@ -185,6 +185,8 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 					}
 
 					defer sendChannel.Close()
+
+					exit <- struct{}{}
 				})
 
 				var introduction api.Introduction
@@ -298,4 +300,5 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 	if err := wsjson.Write(context.Background(), conn, api.NewExited(macKey)); err != nil {
 		panic(err)
 	}
+	os.Exit(0)
 }
