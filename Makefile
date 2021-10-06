@@ -7,7 +7,7 @@ ifeq ($(OS_NAME), linux)
 endif
 
 server:
-	go run main.go signal --address=${ADDRESS}
+	go run main.go signal --address=${ADDRESS} --port=${PORT}
 client:
 	go run main.go client --community=${COMMUNITY} --laddr=${LADDR}
 mdns:

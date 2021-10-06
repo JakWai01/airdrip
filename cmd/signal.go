@@ -14,6 +14,7 @@ import (
 
 const (
 	addressKey = "address"
+	portKey    = "port"
 )
 
 var signalCmd = &cobra.Command{
@@ -28,7 +29,7 @@ var signalCmd = &cobra.Command{
 		}()
 
 		for {
-			socket := viper.GetString(addressKey) + ":8080"
+			socket := viper.GetString(addressKey) + ":" + viper.GetString(portKey)
 
 			addr, err := net.ResolveTCPAddr("tcp", socket)
 			if err != nil {
@@ -58,6 +59,7 @@ var signalCmd = &cobra.Command{
 
 func init() {
 	signalCmd.PersistentFlags().String(addressKey, "localhost", "Listen address")
+	signalCmd.PersistentFlags().String(portKey, "8080", "Port to listen on")
 
 	// Bind env variables
 	if err := viper.BindPFlags(signalCmd.PersistentFlags()); err != nil {
