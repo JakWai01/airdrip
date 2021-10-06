@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/JakWai01/airdrip/pkg/mdns"
 	"github.com/JakWai01/airdrip/pkg/signaling"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -21,6 +22,10 @@ var signalCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Handle lifecycle
 		signaler := signaling.NewSignalingServer()
+
+		go func() {
+			go mdns.RunMDNS()
+		}()
 
 		for {
 			socket := viper.GetString(addressKey) + ":8080"

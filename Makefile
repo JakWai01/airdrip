@@ -10,9 +10,7 @@ server:
 	go run main.go signal --address=${ADDRESS}
 client:
 	go run main.go client --community=${COMMUNITY} --laddr=${LADDR}
-
 mdns:
 	go run main.go mdns
-
 lookup:
 	go run main.go lookup

@@ -99,8 +99,6 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 		peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
 			// Register channel opening handling
 			d.OnOpen(func() {
-				log.Printf("Data channel '%s'-'%d' open. Messages will now be send to any connected DataChannels every 5 seconds\n", d.Label(), d.ID())
-
 				data, err := os.ReadFile("file.txt")
 				if err != nil {
 					fmt.Println(err)
