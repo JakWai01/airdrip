@@ -19,7 +19,7 @@ func RunMDNS() {
 	}
 
 	_, err = mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{
-		LocalNames: []string{"_airdrip.local"},
+		LocalNames: []string{"_signaling.local"},
 	})
 	if err != nil {
 		panic(err)

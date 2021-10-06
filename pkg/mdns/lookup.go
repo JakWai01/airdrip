@@ -24,7 +24,7 @@ func LookupMDNS(ch chan string) {
 		panic(err)
 	}
 
-	_, src, err := server.Query(context.TODO(), "_airdrip.local")
+	_, src, err := server.Query(context.TODO(), "_signaling.local")
 
 	ch <- src.String()
 }
