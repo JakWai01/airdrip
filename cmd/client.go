@@ -13,7 +13,6 @@ import (
 const (
 	laddrKey     = "laddr"
 	communityKey = "community"
-	macKey       = "mac"
 )
 
 var clientCmd = &cobra.Command{
@@ -30,7 +29,7 @@ var clientCmd = &cobra.Command{
 		fmt.Println(socket)
 		go func() {
 
-			go client.HandleConn(socket, viper.GetString(communityKey), viper.GetString(macKey))
+			go client.HandleConn(socket, viper.GetString(communityKey))
 
 		}()
 
@@ -48,7 +47,6 @@ var clientCmd = &cobra.Command{
 func init() {
 	clientCmd.PersistentFlags().String(laddrKey, "localhost", "Listen address")
 	clientCmd.PersistentFlags().String(communityKey, "a", "Community to join")
-	clientCmd.PersistentFlags().String(macKey, "124", "Mac to identify you as a unique host")
 
 	// Bind env variables
 	if err := viper.BindPFlags(clientCmd.PersistentFlags()); err != nil {

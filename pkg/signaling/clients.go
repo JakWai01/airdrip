@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
+	"github.com/google/uuid"
 	"github.com/pion/webrtc/v3"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -20,7 +21,10 @@ func NewSignalingClient() *SignalingClient {
 	return &SignalingClient{}
 }
 
-func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKey string) {
+func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
+
+	uuid := uuid.NewString()
+
 	wsAddress := "ws://" + laddrKey
 	conn, _, error := websocket.Dial(context.Background(), wsAddress, nil)
 	if error != nil {
@@ -84,7 +88,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 				if desc == nil {
 					pendingCandidates = append(pendingCandidates, i)
 					// Hier muss glaub ich die andere Mac gesendet werden
-				} else if err := wsjson.Write(context.Background(), conn, api.NewCandidate(macKey, []byte(i.ToJSON().Candidate))); err != nil {
+				} else if err := wsjson.Write(context.Background(), conn, api.NewCandidate(uuid, []byte(i.ToJSON().Candidate))); err != nil {
 					panic(err)
 				}
 			}
@@ -117,7 +121,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 
 		})
 
-		if err := wsjson.Write(context.Background(), conn, api.NewApplication(communityKey, macKey)); err != nil {
+		if err := wsjson.Write(context.Background(), conn, api.NewApplication(communityKey, uuid)); err != nil {
 			panic(err)
 		}
 
@@ -126,7 +130,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		go func() {
 			<-c
 
-			if err := wsjson.Write(context.Background(), conn, api.NewExited(macKey)); err != nil {
+			if err := wsjson.Write(context.Background(), conn, api.NewExited(uuid)); err != nil {
 				panic(err)
 			}
 
@@ -153,7 +157,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 			// Handle different message types
 			switch v.Opcode {
 			case api.OpcodeAcceptance:
-				if err := wsjson.Write(context.Background(), conn, api.NewReady(macKey)); err != nil {
+				if err := wsjson.Write(context.Background(), conn, api.NewReady(uuid)); err != nil {
 					panic(err)
 				}
 				break
@@ -297,7 +301,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, macKe
 		}
 	}()
 	<-exit
-	if err := wsjson.Write(context.Background(), conn, api.NewExited(macKey)); err != nil {
+	if err := wsjson.Write(context.Background(), conn, api.NewExited(uuid)); err != nil {
 		panic(err)
 	}
 	os.Exit(0)
