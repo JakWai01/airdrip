@@ -73,7 +73,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 		// This triggers when WE have a candidate for the other peer, not the other way around
 		// This candidate key needs to be send to the other peer
 		peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
-
+			fmt.Println("Candidate was generated!")
 			if i == nil {
 				return
 			} else {
@@ -282,9 +282,18 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 					log.Fatal(err)
 				}
 
+				go func() {
+					for candidate := range candidates {
+						if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: candidate}); err != nil {
+							log.Fatal(err)
+						}
+					}
+				}()
+
 				wg.Done()
 				break
 			case api.OpcodeCandidate:
+				fmt.Println("received Candidate!!@#!@#")
 				var candidate api.Candidate
 				if err := json.Unmarshal(data, &candidate); err != nil {
 					log.Fatal(err)
