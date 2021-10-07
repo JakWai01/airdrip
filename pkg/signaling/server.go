@@ -3,6 +3,7 @@ package signaling
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
@@ -38,6 +39,8 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			if err := json.Unmarshal(data, &v); err != nil {
 				log.Fatal(err)
 			}
+
+			fmt.Println(v)
 
 			// Handle different message types
 			switch v.Opcode {

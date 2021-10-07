@@ -152,6 +152,8 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 				log.Fatal(err)
 			}
 
+			fmt.Println(v)
+
 			// Handle different message types
 			switch v.Opcode {
 			case api.OpcodeAcceptance:

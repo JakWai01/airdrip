@@ -25,7 +25,7 @@ var clientCmd = &cobra.Command{
 
 		client := signaling.NewSignalingClient()
 
-		socket := viper.GetString(laddrKey) + ":8080"
+		socket := viper.GetString(laddrKey)
 		fmt.Println(socket)
 		go func() {
 
