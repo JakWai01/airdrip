@@ -1,1 +1,1 @@
-web: go run main.go signal --port=$PORT
+web: airdrip --port=$PORT
