@@ -63,7 +63,7 @@ var signalCmd = &cobra.Command{
 }
 
 func init() {
-	signalCmd.PersistentFlags().String(addressKey, "localhost", "Listen address")
+	signalCmd.PersistentFlags().String(addressKey, "0.0.0.0", "Listen address")
 
 	// Bind env variables
 	if err := viper.BindPFlags(signalCmd.PersistentFlags()); err != nil {
