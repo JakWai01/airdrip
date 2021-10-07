@@ -1,1 +1,1 @@
-web: airdrip --port=$PORT
+web: airdrip signal --port=$PORT
