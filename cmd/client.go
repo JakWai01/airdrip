@@ -13,6 +13,7 @@ import (
 const (
 	laddrKey     = "laddr"
 	communityKey = "community"
+	portKey      = "port"
 )
 
 var clientCmd = &cobra.Command{
@@ -25,7 +26,16 @@ var clientCmd = &cobra.Command{
 
 		client := signaling.NewSignalingClient()
 
-		socket := viper.GetString(laddrKey)
+		socket := ""
+
+		port := viper.GetString(portKey)
+
+		if port != "" {
+			socket = viper.GetString(laddrKey) + ":" + port
+		} else {
+			socket = viper.GetString(laddrKey)
+		}
+
 		fmt.Println(socket)
 		go func() {
 
@@ -47,6 +57,7 @@ var clientCmd = &cobra.Command{
 func init() {
 	clientCmd.PersistentFlags().String(laddrKey, "localhost", "Listen address")
 	clientCmd.PersistentFlags().String(communityKey, "a", "Community to join")
+	clientCmd.PersistentFlags().String(portKey, "", "Port")
 
 	// Bind env variables
 	if err := viper.BindPFlags(clientCmd.PersistentFlags()); err != nil {

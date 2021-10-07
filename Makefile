@@ -9,7 +9,7 @@ endif
 server:
 	go run main.go signal --address=${ADDRESS}
 client:
-	go run main.go client --community=${COMMUNITY} --laddr=${LADDR}
+	go run main.go client --community=${COMMUNITY} --laddr=${LADDR} --port=${PORT}
 mdns:
 	go run main.go mdns
 lookup:
