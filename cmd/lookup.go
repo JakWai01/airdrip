@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -24,7 +25,7 @@ var lookupCmd = &cobra.Command{
 		for {
 			select {
 			case err := <-fatal:
-				panic(err)
+				log.Fatal(err)
 			case socket := <-done:
 				ip := strings.Split(socket, ":")[0]
 				fmt.Println(ip)

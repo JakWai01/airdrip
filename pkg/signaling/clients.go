@@ -28,7 +28,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 	wsAddress := "ws://" + laddrKey
 	conn, _, error := websocket.Dial(context.Background(), wsAddress, nil)
 	if error != nil {
-		panic(error)
+		log.Fatal(error)
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "Closing websocket connection nominally")
 
@@ -44,7 +44,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 	// Create RTCPeerConnection
 	var peerConnection, err = webrtc.NewPeerConnection(config)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	defer func() {
 		if cErr := peerConnection.Close(); cErr != nil {
@@ -89,7 +89,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 					pendingCandidates = append(pendingCandidates, i)
 					// Hier muss glaub ich die andere Mac gesendet werden
 				} else if err := wsjson.Write(context.Background(), conn, api.NewCandidate(uuid, []byte(i.ToJSON().Candidate))); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 			}
 
@@ -113,14 +113,14 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 
 				sendErr := d.SendText(string(message))
 				if sendErr != nil {
-					panic(sendErr)
+					log.Fatal(sendErr)
 				}
 			})
 
 		})
 
 		if err := wsjson.Write(context.Background(), conn, api.NewApplication(communityKey, uuid)); err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 
 		c := make(chan os.Signal)
@@ -129,7 +129,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 			<-c
 
 			if err := wsjson.Write(context.Background(), conn, api.NewExited(uuid)); err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 
 			os.Exit(0)
@@ -143,27 +143,27 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 			_, data, err := conn.Read(context.Background())
 			if err != nil {
 				fmt.Println(peerConnection.ConnectionState())
-				panic(err)
+				log.Fatal(err)
 			}
 
 			// Parse message
 			var v api.Message
 			if err := json.Unmarshal(data, &v); err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 
 			// Handle different message types
 			switch v.Opcode {
 			case api.OpcodeAcceptance:
 				if err := wsjson.Write(context.Background(), conn, api.NewReady(uuid)); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 				break
 			case api.OpcodeIntroduction:
 				// Create DataChannel
 				sendChannel, err := peerConnection.CreateDataChannel("foo", nil)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 				sendChannel.OnClose(func() {
 					log.Println("sendChannel has closed")
@@ -177,13 +177,13 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 					var file File
 
 					if err := json.Unmarshal(msg.Data, &file); err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 
 					// Write to file
 					err := os.WriteFile("test.txt", file.Payload, 0644)
 					if err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 
 					defer sendChannel.Close()
@@ -193,34 +193,34 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 
 				var introduction api.Introduction
 				if err := json.Unmarshal(data, &introduction); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				partnerMac := introduction.Mac
 
 				offer, err := peerConnection.CreateOffer(nil)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				if err := peerConnection.SetLocalDescription(offer); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				data, err := json.Marshal(offer)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				if err := wsjson.Write(context.Background(), conn, api.NewOffer(data, partnerMac)); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				break
 			case api.OpcodeOffer:
 				var offer api.Offer
 				if err := json.Unmarshal(data, &offer); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				partnerMac := offer.Mac
@@ -228,38 +228,38 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 				var offer_val webrtc.SessionDescription
 
 				if err := json.Unmarshal([]byte(offer.Payload), &offer_val); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				if err := peerConnection.SetRemoteDescription(offer_val); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				go func() {
 					for candidate := range candidates {
 						if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: candidate}); err != nil {
-							panic(err)
+							log.Fatal(err)
 						}
 					}
 				}()
 
 				answer_val, err := peerConnection.CreateAnswer(nil)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				err = peerConnection.SetLocalDescription(answer_val)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				data, err := json.Marshal(answer_val)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				if err := wsjson.Write(context.Background(), conn, api.NewAnswer(data, partnerMac)); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				wg.Done()
@@ -267,17 +267,17 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 			case api.OpcodeAnswer:
 				var answer api.Answer
 				if err := json.Unmarshal(data, &answer); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				var answer_val webrtc.SessionDescription
 
 				if err := json.Unmarshal([]byte(answer.Payload), &answer_val); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				if err := peerConnection.SetRemoteDescription(answer_val); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				wg.Done()
@@ -285,7 +285,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 			case api.OpcodeCandidate:
 				var candidate api.Candidate
 				if err := json.Unmarshal(data, &candidate); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				go func() {
@@ -300,7 +300,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
 	}()
 	<-exit
 	if err := wsjson.Write(context.Background(), conn, api.NewExited(uuid)); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	os.Exit(0)
 }

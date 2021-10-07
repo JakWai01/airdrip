@@ -1,6 +1,7 @@
 package mdns
 
 import (
+	"log"
 	"net"
 
 	"github.com/pion/mdns"
@@ -10,19 +11,19 @@ import (
 func RunMDNS() {
 	addr, err := net.ResolveUDPAddr("udp", mdns.DefaultAddress)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	l, err := net.ListenUDP("udp4", addr)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	_, err = mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{
 		LocalNames: []string{"_signaling.local"},
 	})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	select {}
 }

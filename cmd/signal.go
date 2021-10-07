@@ -38,7 +38,7 @@ var signalCmd = &cobra.Command{
 
 			addr, err := net.ResolveTCPAddr("tcp", socket)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 
 			log.Printf("signaling server listening on %v", socket)
@@ -46,7 +46,7 @@ var signalCmd = &cobra.Command{
 			handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 				conn, err := websocket.Accept(rw, r, nil)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				log.Println("client connected")

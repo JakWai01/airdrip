@@ -3,6 +3,7 @@ package signaling
 import (
 	"context"
 	"encoding/json"
+	"log"
 
 	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
 	"nhooyr.io/websocket"
@@ -29,13 +30,13 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			// Read message from connection
 			_, data, err := conn.Read(context.Background())
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 
 			// Parse message
 			var v api.Message
 			if err := json.Unmarshal(data, &v); err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 
 			// Handle different message types
@@ -43,7 +44,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			case api.OpcodeApplication:
 				var application api.Application
 				if err := json.Unmarshal(data, &application); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				if _, ok := s.macs[application.Mac]; ok {
@@ -51,7 +52,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 					// Check if this conn is correct
 					if err := wsjson.Write(context.Background(), &conn, api.NewRejection()); err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 					break
 				}
@@ -63,7 +64,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 					if len(val) >= 2 {
 						// Send Rejection. This community is full
 						if err := wsjson.Write(context.Background(), &conn, api.NewRejection()); err != nil {
-							panic(err)
+							log.Fatal(err)
 						}
 
 						break
@@ -73,7 +74,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 						s.macs[application.Mac] = false
 
 						if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
-							panic(err)
+							log.Fatal(err)
 						}
 
 						break
@@ -84,7 +85,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 					s.macs[application.Mac] = false
 
 					if err := wsjson.Write(context.Background(), &conn, api.NewAcceptance()); err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 					break
 				}
@@ -92,23 +93,23 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			case api.OpcodeReady:
 				var ready api.Ready
 				if err := json.Unmarshal(data, &ready); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				// If we receive ready, mark the sending person as ready and check if both are ready. Loop through all communities to get the community the person is in.
 				s.macs[ready.Mac] = true
 
-				// Loop thorugh all members of the community and thorugh all elements in it. If the mac isn't member of a community, this will panic.
+				// Loop thorugh all members of the community and thorugh all elements in it. If the mac isn't member of a community, this will log.Fatal.
 				community, err := s.getCommunity(ready.Mac)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				if len(s.communities[community]) == 2 {
 					if s.macs[s.communities[community][0]] == true && s.macs[s.communities[community][1]] == true {
 						// Send an introduction to the peer containing the address of the first peer.
 						if err := wsjson.Write(context.Background(), &conn, api.NewIntroduction(s.communities[community][0])); err != nil {
-							panic(err)
+							log.Fatal(err)
 						}
 						break
 					}
@@ -117,7 +118,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 			case api.OpcodeOffer:
 				var offer api.Offer
 				if err := json.Unmarshal(data, &offer); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				// Get the connection of the receiver and send him the payload
@@ -125,20 +126,20 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 				community, err := s.getCommunity(offer.Mac)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				// We need to assign this
 				offer.Mac = s.getSenderMac(offer.Mac, community)
 
 				if err := wsjson.Write(context.Background(), &receiver, offer); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 				break
 			case api.OpcodeAnswer:
 				var answer api.Answer
 				if err := json.Unmarshal(data, &answer); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				// Get connection of the receiver and send him the payload
@@ -146,25 +147,25 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 				community, err := s.getCommunity(answer.Mac)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				answer.Mac = s.getSenderMac(answer.Mac, community)
 
 				if err := wsjson.Write(context.Background(), &receiver, answer); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				break
 			case api.OpcodeCandidate:
 				var candidate api.Candidate
 				if err := json.Unmarshal(data, &candidate); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				community, err := s.getCommunity(candidate.Mac)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				candidate.Mac = s.getSenderMac(candidate.Mac, community)
@@ -172,14 +173,14 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				target := s.connections[candidate.Mac]
 
 				if err := wsjson.Write(context.Background(), &target, candidate); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				break
 			case api.OpcodeExited:
 				var exited api.Exited
 				if err := json.Unmarshal(data, &exited); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				var receiver websocket.Conn
@@ -187,7 +188,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				// Get the other peer in the community
 				community, err := s.getCommunity(exited.Mac)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				if len(s.communities[community]) == 2 {
@@ -204,7 +205,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 
 				// Send to the other peer
 				if err := wsjson.Write(context.Background(), &receiver, api.NewResignation(exited.Mac)); err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 
 				// Remove this peer from all maps
@@ -222,7 +223,7 @@ func (s *SignalingServer) HandleConn(conn websocket.Conn) {
 				// conn.Close(websocket.StatusNormalClosure, "Finished")
 				break loop
 			default:
-				panic("Invalid message. Please use a valid opcode.")
+				log.Fatal("Invalid message. Please use a valid opcode.")
 			}
 		}
 	}()

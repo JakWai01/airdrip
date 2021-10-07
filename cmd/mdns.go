@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"log"
 	"os"
 
 	"github.com/JakWai01/airdrip/pkg/mdns"
@@ -22,7 +23,7 @@ var mdnsCmd = &cobra.Command{
 		for {
 			select {
 			case err := <-fatal:
-				panic(err)
+				log.Fatal(err)
 			case <-done:
 				os.Exit(0)
 			}

@@ -2,6 +2,7 @@ package mdns
 
 import (
 	"context"
+	"log"
 	"net"
 
 	"github.com/pion/mdns"
@@ -11,17 +12,17 @@ import (
 func LookupMDNS(ch chan string) {
 	addr, err := net.ResolveUDPAddr("udp", mdns.DefaultAddress)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	l, err := net.ListenUDP("udp4", addr)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	server, err := mdns.Server(ipv4.NewPacketConn(l), &mdns.Config{})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	_, src, err := server.Query(context.TODO(), "_signaling.local")
