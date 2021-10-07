@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/JakWai01/airdrip/pkg/mdns"
 	"github.com/JakWai01/airdrip/pkg/signaling"
@@ -28,8 +29,8 @@ var signalCmd = &cobra.Command{
 		}()
 
 		for {
-			port, err := os.GetEnv("PORT")
-			if err != nil {
+			port := os.Getenv("PORT")
+			if port == "" {
 				port = "23432"
 			}
 
