@@ -19,6 +19,12 @@ func prettyJson(input string) (string, error) {
 	return string(pretty), nil
 }
 
+func startClient(community string, file []byte) {
+	// client := signaling.NewSignalingClient()
+
+	// client.HandleConn(socket, community, fileName, content)
+}
+
 func jsonWrapper() js.Func {
 	jsonFunc := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		if len(args) != 1 {

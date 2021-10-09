@@ -33,15 +33,17 @@
             document.querySelector('input').addEventListener('change', function() {
 
                 var reader = new FileReader();
-                reader.onload = function() {
+                reader.onload = function(readerEvt) {
 
                     var arrayBuffer = this.result,
                     array = new Uint8Array(arrayBuffer),
                     binaryString = String.fromCharCode.apply(null, array);
-
+                    var filename = document.getElementById("myFile").value;
+                    console.log(filename.split("\\").pop())
                     console.log(binaryString);
                     console.log(generateCommunityName())        
                     // Call function here 
+                    
                 }
                 reader.readAsArrayBuffer(this.files[0]);
 
