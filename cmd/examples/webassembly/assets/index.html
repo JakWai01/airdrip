@@ -14,6 +14,21 @@
             WebAssembly.instantiateStreaming(fetch("json.wasm"), go.importObject).then((result) => {
                 go.run(result.instance);
             })
+            
+            function getRandomInt(max) {
+                return Math.floor(Math.random() * max);
+            }
+
+            function generateCommunityName() {
+                const words = ['Tux', 'Linux', 'OSS', 'Arch', 'Debian', 'Mint', 'Fedora', 'Open', 'HdM', 'Selfnet', 'SSL', 'Telnet', 'GPL']
+
+                word1 = words[getRandomInt(words.length)]
+                word2 = words[getRandomInt(words.length)]
+                word3 = words[getRandomInt(words.length)]
+
+                return word1 + "-" + word2 + "-" + word3
+            }
+
 
             document.querySelector('input').addEventListener('change', function() {
 
@@ -25,11 +40,13 @@
                     binaryString = String.fromCharCode.apply(null, array);
 
                     console.log(binaryString);
-
+                    console.log(generateCommunityName())        
+                    // Call function here 
                 }
                 reader.readAsArrayBuffer(this.files[0]);
 
             }, false);
+
         </script>
     </body>
 </html>
