@@ -2,11 +2,34 @@
     <head>
         <meta charset="utf-8"/>
         <script src="wasm_exec.js"></script>
+        
+    </head>
+    <body>
+        <label for="myfile">Select a file:</label>
+        <input type="file" id="myFile" name="myfile">
+        <h1>Community name:</h1>
+        <p></p>
         <script>
             const go = new Go();
             WebAssembly.instantiateStreaming(fetch("json.wasm"), go.importObject).then((result) => {
                 go.run(result.instance);
             })
+
+            document.querySelector('input').addEventListener('change', function() {
+
+                var reader = new FileReader();
+                reader.onload = function() {
+
+                    var arrayBuffer = this.result,
+                    array = new Uint8Array(arrayBuffer),
+                    binaryString = String.fromCharCode.apply(null, array);
+
+                    console.log(binaryString);
+
+                }
+                reader.readAsArrayBuffer(this.files[0]);
+
+            }, false);
         </script>
-    </head>
+    </body>
 </html>
