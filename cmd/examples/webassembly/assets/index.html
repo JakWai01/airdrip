@@ -5,10 +5,14 @@
         
     </head>
     <body>
+        <h1>New Channel</h1>
         <label for="myfile">Select a file:</label>
         <input type="file" id="myFile" name="myfile">
-        <h1>Community name:</h1>
-        <p></p>
+        <p id="tag">Channel tag: </p>
+        <h1>Join Channel</h1>
+            <p>Enter channel tag:</p>
+            <input type="text" id="fname" name="fname">
+            <button onclick="joinCommunity()">Join</button>
         <script>
             const go = new Go();
             WebAssembly.instantiateStreaming(fetch("json.wasm"), go.importObject).then((result) => {
@@ -41,14 +45,22 @@
                     var filename = document.getElementById("myFile").value;
                     console.log(filename.split("\\").pop())
                     console.log(binaryString);
-                    console.log(generateCommunityName())        
+                    communityName = generateCommunityName()        
+                    console.log(communityName)
+                    document.getElementById("tag").textContent += communityName
                     // Call function here 
-                    send(generateCommunityName(), filename.split("\\").pop(), binaryString)
+                    send(communityName, filename.split("\\").pop(), binaryString)
                     console.log("Executed function")
                 }
                 reader.readAsArrayBuffer(this.files[0]);
 
             }, false);
+
+            function joinCommunity() {
+                communityName = document.getElementById("fname").value
+                console.log(communityName)
+                send(communityName, "", "")
+            }
 
         </script>
     </body>
