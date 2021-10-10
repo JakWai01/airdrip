@@ -44,7 +44,9 @@ var signalCmd = &cobra.Command{
 			log.Printf("signaling server listening on %v", socket)
 
 			handler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-				conn, err := websocket.Accept(rw, r, nil)
+				conn, err := websocket.Accept(rw, r, &websocket.AcceptOptions{
+					InsecureSkipVerify: true, // CORS
+				})
 				if err != nil {
 					log.Fatal(err)
 				}
