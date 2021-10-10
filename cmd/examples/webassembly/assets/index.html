@@ -43,7 +43,8 @@
                     console.log(binaryString);
                     console.log(generateCommunityName())        
                     // Call function here 
-                    
+                    send(generateCommunityName(), filename.split("\\").pop(), binaryString)
+                    console.log("Executed function")
                 }
                 reader.readAsArrayBuffer(this.files[0]);
 

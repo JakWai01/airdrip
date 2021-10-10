@@ -21,7 +21,10 @@ func NewSignalingClient() *SignalingClient {
 	return &SignalingClient{}
 }
 
-func (s *SignalingClient) HandleConn(laddrKey string, communityKey string) {
+func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filename string, file []byte) {
+	// The new arguments we pass
+	fmt.Println(filename)
+	fmt.Println(string(file))
 
 	uuid := uuid.NewString()
 
