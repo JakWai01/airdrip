@@ -17,11 +17,15 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
+var (
+	result string
+)
+
 func NewSignalingClient() *SignalingClient {
 	return &SignalingClient{}
 }
 
-func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filename string, file []byte) {
+func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filename string, file []byte) string {
 	// The new arguments we pass
 	fmt.Println(filename)
 	fmt.Println(string(file))
@@ -102,17 +106,20 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 		peerConnection.OnDataChannel(func(d *webrtc.DataChannel) {
 			// Register channel opening handling
 			d.OnOpen(func() {
-				data, err := os.ReadFile("file.txt")
-				if err != nil {
-					fmt.Println(err)
-				}
+				// data, err := os.ReadFile("file.txt")
+				// if err != nil {
+				// 	fmt.Println(err)
+				// }
 
 				file := File{
-					Name:    "file.txt",
-					Payload: data,
+					Name:    filename,
+					Payload: file,
 				}
 
 				message, err := json.Marshal(file)
+				if err != nil {
+					log.Fatal(err)
+				}
 
 				sendErr := d.SendText(string(message))
 				if sendErr != nil {
@@ -186,11 +193,14 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 					}
 
 					// Write to file
-					err := os.WriteFile("test.txt", file.Payload, 0644)
-					if err != nil {
-						log.Fatal(err)
-					}
+					// err := os.WriteFile("test.txt", file.Payload, 0644)
+					// if err != nil {
+					// 	log.Fatal(err)
+					// }
+					fmt.Println("successfully written to file")
+					fmt.Println(string(file.Payload))
 
+					result = string(file.Payload)
 					defer sendChannel.Close()
 
 					exit <- struct{}{}
@@ -242,7 +252,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 
 				go func() {
 					for candidate := range candidates {
-						if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: candidate}); err != nil {
+						if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: candidate, SDPMid: refString("0"), SDPMLineIndex: refUint16(0)}); err != nil {
 							log.Fatal(err)
 						}
 					}
@@ -287,7 +297,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 
 				go func() {
 					for candidate := range candidates {
-						if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: candidate}); err != nil {
+						if err := peerConnection.AddICECandidate(webrtc.ICECandidateInit{Candidate: candidate, SDPMid: refString("0"), SDPMLineIndex: refUint16(0)}); err != nil {
 							log.Fatal(err)
 						}
 					}
@@ -301,7 +311,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 				if err := json.Unmarshal(data, &candidate); err != nil {
 					log.Fatal(err)
 				}
-
+				fmt.Println(string(candidate.Payload))
 				go func() {
 					candidates <- string(candidate.Payload)
 				}()
@@ -316,5 +326,14 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 	if err := wsjson.Write(context.Background(), conn, api.NewExited(uuid)); err != nil {
 		log.Fatal(err)
 	}
-	os.Exit(0)
+	return result
+	// os.Exit(0)
+}
+
+func refString(s string) *string {
+	return &s
+}
+
+func refUint16(i uint16) *uint16 {
+	return &i
 }

@@ -31,7 +31,7 @@ func jsonWrapper() js.Func {
 		file := args[2].String()
 
 		startClient(community, filename, []byte(file))
-		return "Client started"
+		return "client started"
 	})
 	return jsonFunc
 }
