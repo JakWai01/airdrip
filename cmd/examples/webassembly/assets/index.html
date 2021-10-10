@@ -2,7 +2,6 @@
     <head>
         <meta charset="utf-8"/>
         <script src="wasm_exec.js"></script>
-        
     </head>
     <body>
         <h1>New Channel</h1>
@@ -25,20 +24,15 @@
 
             function generateCommunityName() {
                 const words = ['Tux', 'Linux', 'OSS', 'Arch', 'Debian', 'Mint', 'Fedora', 'Open', 'HdM', 'Selfnet', 'SSL', 'Telnet', 'GPL']
-
                 word1 = words[getRandomInt(words.length)]
                 word2 = words[getRandomInt(words.length)]
                 word3 = words[getRandomInt(words.length)]
-
                 return word1 + "-" + word2 + "-" + word3
             }
 
-
             document.querySelector('input').addEventListener('change', function() {
-
                 var reader = new FileReader();
                 reader.onload = function(readerEvt) {
-
                     var arrayBuffer = this.result,
                     array = new Uint8Array(arrayBuffer),
                     binaryString = String.fromCharCode.apply(null, array);
@@ -53,7 +47,6 @@
                     console.log("Executed function")
                 }
                 reader.readAsArrayBuffer(this.files[0]);
-
             }, false);
 
             function joinCommunity() {
