@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"syscall/js"
 
 	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
 	"github.com/google/uuid"
@@ -199,6 +200,15 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 					// }
 					fmt.Println("successfully written to file")
 					fmt.Println(string(file.Payload))
+
+					blob := js.Global().JSValue().Get("Blob").New([]interface{}{string(file.Payload)}, map[string]interface{}{
+						"type": "application/octet-stream",
+					})
+
+					link := js.Global().Get("document").Call("createElement", "a")
+					link.Set("href", js.Global().Get("URL").Call("createObjectURL", blob))
+					link.Set("download", file.Name)
+					link.Call("click")
 
 					result = string(file.Payload)
 					defer sendChannel.Close()
