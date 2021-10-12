@@ -14,6 +14,10 @@ mdns:
 	go run main.go mdns
 lookup:
 	go run main.go lookup
-run: 
-	GOOS=js GOARCH=wasm go build -o  cmd/examples/webassembly/assets/json.wasm cmd/examples/webassembly/cmd/wasm/main.go
-	go run ./cmd/examples/webassembly/cmd/server/main.go
+#run: 
+#	GOOS=js GOARCH=wasm go build -o  cmd/examples/webassembly/assets/json.wasm cmd/examples/webassembly/cmd/wasm/main.go
+#	go run ./cmd/examples/webassembly/cmd/server/main.go
+build: 
+	GOOS=js GOARCH=wasm go build -o web/app.wasm cmd/airdrip-frontend/main.go
+run: build
+	go run ./cmd/airdrip-frontend/main.go
