@@ -65,7 +65,7 @@ func (c *MyComponent) Render() app.UI {
 						fmt.Println(string(fileContent))
 
 						client := signaling.NewSignalingClient()
-						go client.HandleConn("airdrip.herokuapp.com", communityName, filename, fileContent)
+						go client.HandleConn("airdrip.herokuapp.com", communityName, strings.TrimPrefix(filename, `C:\fakepath\`), fileContent)
 
 					}()
 
