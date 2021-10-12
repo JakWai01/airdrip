@@ -3,6 +3,8 @@ module github.com/JakWai01/airdrip
 // +heroku goVersion go1.16
 go 1.16
 
+// +heroku install .
+
 require (
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/mdns v1.0.4
