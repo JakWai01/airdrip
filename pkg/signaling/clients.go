@@ -12,7 +12,6 @@ import (
 
 	api "github.com/JakWai01/airdrip/pkg/api/websockets/v1"
 	"github.com/google/uuid"
-	"github.com/maxence-charriere/go-app/v9/pkg/app"
 	"github.com/pion/webrtc/v3"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
@@ -202,15 +201,7 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 					fmt.Println(string(file.Payload))
 
 					// This is important
-
-					blob := app.Window().JSValue().Get("Blob").New([]interface{}{string(file.Payload)}, map[string]interface{}{
-						"type": "application/octet-stream",
-					})
-
-					link := app.Window().Get("document").Call("createElement", "a")
-					link.Set("href", app.Window().Get("URL").Call("createObjectURL", blob))
-					link.Set("download", file.Name)
-					link.Call("click")
+					Save(file)
 
 					result = string(file.Payload)
 					defer sendChannel.Close()
