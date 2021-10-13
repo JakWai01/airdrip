@@ -121,7 +121,8 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 					log.Fatal(err)
 				}
 
-				sendErr := d.SendText(string(message))
+				sendErr := d.Send(message)
+
 				if sendErr != nil {
 					log.Fatal(sendErr)
 				}
