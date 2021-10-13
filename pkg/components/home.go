@@ -14,7 +14,9 @@ import (
 type MyComponent struct {
 	app.Compo
 
-	tag string
+	tag         string
+	fileName    string
+	fileContent []byte
 }
 
 func (c *MyComponent) Render() app.UI {
@@ -26,87 +28,114 @@ func (c *MyComponent) Render() app.UI {
 				Src("wasm_exec.js"),
 			app.H1().
 				Body(
+					app.Text("Airdrip"),
+				).Class("pf-c-title pf-m-4xl"),
+			app.H2().
+				Body(
 					app.Text("New Channel"),
-				),
+				).Class("pf-c-title pf-m-3xl"),
 			app.Label().
 				For("myfile").
 				Body(
 					app.Text("Select a file:"),
 				),
-			app.Input().
-				Type("File").
-				ID("myFile").
-				Name("myfile").OnChange(func(ctx app.Context, e app.Event) {
-				e.PreventDefault()
+			app.Div().
+				Class("pf-c-file-upload").
+				Body(
+					app.Div().
+						Class("pf-c-file-upload__file-select").
+						Body(
+							app.Div().
+								Class("pf-c-input-group").
+								Body(
+									app.Input().
+										Class("pf-c-form-control").
+										ID("myFile").
+										Type("File").
+										ReadOnly(true),
+									app.Button().
+										Class("pf-c-button pf-m-control").
+										Type("button").
+										Text("Create").
+										OnClick(func(ctx app.Context, e app.Event) {
+											e.PreventDefault()
 
-				reader := app.Window().JSValue().Get("FileReader").New()
-				input := app.Window().GetElementByID("myFile")
+											reader := app.Window().JSValue().Get("FileReader").New()
+											input := app.Window().GetElementByID("myFile")
 
-				reader.Set("onload", app.FuncOf(func(this app.Value, args []app.Value) interface{} {
-					go func() {
-						rawFileContent := app.Window().Get("Uint8Array").New(args[0].Get("target").Get("result"))
+											reader.Set("onload", app.FuncOf(func(this app.Value, args []app.Value) interface{} {
+												go func() {
+													rawFileContent := app.Window().Get("Uint8Array").New(args[0].Get("target").Get("result"))
 
-						fileContent := make([]byte, rawFileContent.Get("length").Int())
-						app.CopyBytesToGo(fileContent, rawFileContent)
+													c.fileContent = make([]byte, rawFileContent.Get("length").Int())
+													app.CopyBytesToGo(c.fileContent, rawFileContent)
 
-						// Generate community name
-						communityName := generateCommunityName()
-						fmt.Println(communityName)
+													communityName := generateCommunityName()
+													fmt.Println(communityName)
 
-						ctx.Dispatch(func(_ app.Context) {
-							c.tag = communityName
-						})
+													ctx.Dispatch(func(_ app.Context) {
+														c.tag = communityName
+													})
 
-						// get filename
-						filename := app.Window().GetElementByID("myFile").Get("value").String()
-						fmt.Println(strings.TrimPrefix(filename, `C:\fakepath\`))
+													filename := app.Window().GetElementByID("myFile").Get("value").String()
+													fmt.Println(strings.TrimPrefix(filename, `C:\fakepath\`))
 
-						// call send function here
-						fmt.Println(string(fileContent))
+													fmt.Println(string(c.fileContent))
 
-						client := signaling.NewSignalingClient()
-						go client.HandleConn("airdrip.herokuapp.com", communityName, strings.TrimPrefix(filename, `C:\fakepath\`), fileContent)
+													client := signaling.NewSignalingClient()
+													go client.HandleConn("airdrip.herokuapp.com", communityName, strings.TrimPrefix(filename, `C:\fakepath\`), c.fileContent)
 
-					}()
+												}()
 
-					return nil
-				}))
+												return nil
+											}))
 
-				if file := input.Get("files").Get("0"); !file.IsUndefined() {
-					reader.Call("readAsArrayBuffer", file)
-				} else {
-					c.clear()
-				}
-
-			}),
+											if file := input.Get("files").Get("0"); !file.IsUndefined() {
+												reader.Call("readAsArrayBuffer", file)
+											} else {
+												c.clear()
+											}
+										}),
+								),
+						),
+				),
 			app.P().
 				ID("tag").
 				Body(
 					app.Text("Channel tag:"+c.tag),
 				),
-			app.H1().
+			app.H2().
 				Body(
 					app.Text("Join Channel"),
-				),
+				).Class("pf-c-title pf-m-3xl"),
 			app.P().
 				Body(
 					app.Text("Enter channel tag:"),
 				),
-			app.Input().
-				Type("text").
-				ID("fname").
-				Name("fname"),
-			app.Button().
+			app.Div().
+				Class("pf-c-input-group").
 				Body(
-					app.Text("Join"),
-				).OnClick(func(ctx app.Context, e app.Event) {
-				communityName := app.Window().GetElementByID("fname").Get("value").String()
-				fmt.Println(communityName)
+					app.Input().
+						Class("pf-c-form-control").
+						Type("search").
+						ID("fname").
+						Name("fname").
+						Aria("label", "Search input example"),
+					app.Button().
+						Class("pf-c-button pf-m-control").
+						Type("button").
+						Aria("label", "Search button for search input").
+						Body(
+							app.Text("Join"),
+						).OnClick(func(ctx app.Context, e app.Event) {
+						communityName := app.Window().GetElementByID("fname").Get("value").String()
+						fmt.Println(communityName)
 
-				// call send function
-				client := signaling.NewSignalingClient()
-				go client.HandleConn("airdrip.herokuapp.com", communityName, "", []byte(""))
-			}),
+						// call send function
+						client := signaling.NewSignalingClient()
+						go client.HandleConn("airdrip.herokuapp.com", communityName, "", []byte(""))
+					}),
+				),
 		)
 }
 
