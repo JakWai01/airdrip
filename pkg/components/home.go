@@ -2,9 +2,12 @@ package components
 
 import (
 	"crypto/rand"
+	"fmt"
 	"log"
 	"math/big"
+	"strings"
 
+	"github.com/JakWai01/airdrip/pkg/signaling"
 	"github.com/maxence-charriere/go-app/v9/pkg/app"
 )
 
@@ -115,12 +118,71 @@ func (c *MyComponent) Render() app.UI {
 																			app.Text("*"),
 																		),
 																),
-															app.Input().
-																Class("pf-c-form-control").
-																Required(true).
-																Type("text").
-																ID("login-demo-form-username").
-																Name("login-demo-form-username"),
+															app.Div().
+																Class("pf-c-file-upload").
+																Body(
+																	app.Div().
+																		Class("pf-c-file-upload__file-select").
+																		Body(
+																			app.Div().
+																				Class("pf-c-input-group").
+																				Body(
+																					app.Input().
+																						Class("pf-c-form-control").
+																						ID("myFile").
+																						Type("File").
+																						ReadOnly(true),
+																					app.Button().
+																						Class("pf-c-button pf-m-control").
+																						Type("button").
+																						Text("Create").
+																						OnClick(func(ctx app.Context, e app.Event) {
+																							e.PreventDefault()
+
+																							reader := app.Window().JSValue().Get("FileReader").New()
+																							input := app.Window().GetElementByID("myFile")
+
+																							reader.Set("onload", app.FuncOf(func(this app.Value, args []app.Value) interface{} {
+																								go func() {
+																									rawFileContent := app.Window().Get("Uint8Array").New(args[0].Get("target").Get("result"))
+
+																									c.fileContent = make([]byte, rawFileContent.Get("length").Int())
+																									app.CopyBytesToGo(c.fileContent, rawFileContent)
+
+																									communityName := generateCommunityName()
+																									fmt.Println(communityName)
+
+																									ctx.Dispatch(func(_ app.Context) {
+																										c.tag = communityName
+																									})
+
+																									filename := app.Window().GetElementByID("myFile").Get("value").String()
+																									fmt.Println(strings.TrimPrefix(filename, `C:\fakepath\`))
+
+																									fmt.Println(string(c.fileContent))
+
+																									client := signaling.NewSignalingClient()
+																									go client.HandleConn("airdrip.herokuapp.com", communityName, strings.TrimPrefix(filename, `C:\fakepath\`), c.fileContent)
+
+																								}()
+
+																								return nil
+																							}))
+
+																							if file := input.Get("files").Get("0"); !file.IsUndefined() {
+																								reader.Call("readAsArrayBuffer", file)
+																							} else {
+																								c.clear()
+																							}
+																						}),
+																				),
+																		),
+																),
+														),
+													app.H1().
+														ID("tag").
+														Body(
+															app.Text("Channel tag: "+c.tag),
 														),
 													app.Div().
 														Class("pf-c-form__group").
@@ -141,22 +203,43 @@ func (c *MyComponent) Render() app.UI {
 																			app.Text("*"),
 																		),
 																),
-															app.Input().
-																Class("pf-c-form-control").
-																Required(true).
-																Type("password").
-																ID("login-demo-form-password").
-																Name("login-demo-form-password").
-																Placeholder("Linux-OSS-HdM"),
-														),
-													app.Div().
-														Class("pf-c-form__group pf-m-action").
-														Body(
-															app.Button().
-																Class("pf-c-button pf-m-primary pf-m-block").
-																Type("submit").
+															app.Div().
+																Class("pf-c-search-input").
 																Body(
-																	app.Text("Log in"),
+																	app.Div().
+																		Class("pf-c-input-group").
+																		Body(
+																			app.Div().
+																				Class("pf-c-search-input__bar").
+																				Body(
+																					app.Span().
+																						Class("pf-c-search-input__text").
+																						Body(
+																							app.Input().
+																								Type("text").
+																								ID("fname").
+																								Placeholder("Linux-OSS-HdM").
+																								Aria("label", "Find by name"),
+																						),
+																				),
+																			app.Button().
+																				Class("pf-c-button pf-m-control").
+																				Type("submit").
+																				Aria("label", "Search").
+																				Body(
+																					app.Text("Join"),
+																				).
+																				OnClick(func(ctx app.Context, e app.Event) {
+																					e.PreventDefault()
+
+																					communityName := app.Window().GetElementByID("fname").Get("value").String()
+																					fmt.Println(communityName)
+
+																					// call send function
+																					client := signaling.NewSignalingClient()
+																					go client.HandleConn("airdrip.herokuapp.com", communityName, "", []byte(""))
+																				}),
+																		),
 																),
 														),
 												),
@@ -164,50 +247,6 @@ func (c *MyComponent) Render() app.UI {
 									app.Footer().
 										Class("pf-c-login__main-footer").
 										Body(
-											app.Ul().
-												Class("pf-c-login__main-footer-links").
-												Body(
-													app.Li().
-														Class("pf-c-login__main-footer-links-item").
-														Body(
-															app.A().
-																Href("#").
-																Class("pf-c-login__main-footer-links-item-link").
-																Aria("label", "Log in with Google"),
-														),
-													app.Li().
-														Class("pf-c-login__main-footer-links-item").
-														Body(
-															app.A().
-																Href("#").
-																Class("pf-c-login__main-footer-links-item-link").
-																Aria("label", "Log in with Github"),
-														),
-													app.Li().
-														Class("pf-c-login__main-footer-links-item").
-														Body(
-															app.A().
-																Href("#").
-																Class("pf-c-login__main-footer-links-item-link").
-																Aria("label", "Log in with Dropbox"),
-														),
-													app.Li().
-														Class("pf-c-login__main-footer-links-item").
-														Body(
-															app.A().
-																Href("#").
-																Class("pf-c-login__main-footer-links-item-link").
-																Aria("label", "Log in with Facebook"),
-														),
-													app.Li().
-														Class("pf-c-login__main-footer-links-item").
-														Body(
-															app.A().
-																Href("#").
-																Class("pf-c-login__main-footer-links-item-link").
-																Aria("label", "Log in with Gitlab"),
-														),
-												),
 											app.Div().
 												Class("pf-c-login__main-footer-band").
 												Body(
