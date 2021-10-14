@@ -111,17 +111,17 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 				// 	fmt.Println(err)
 				// }
 
-				// file := File{
-				// 	Name:    filename,
-				// 	Payload: file,
-				// }
+				file := File{
+					Name:    filename,
+					Payload: file,
+				}
 
-				// message, err := json.Marshal(file)
-				// if err != nil {
-				// 	log.Fatal(err)
-				// }
+				message, err := json.Marshal(file)
+				if err != nil {
+					log.Fatal(err)
+				}
 
-				sendErr := d.Send(file)
+				sendErr := d.Send(message)
 
 				if sendErr != nil {
 					log.Fatal(sendErr)
@@ -187,11 +187,11 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 				sendChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
 					// log.Printf("Message from DataChannel %s payload %s", sendChannel.Label(), string(msg.Data))
 
-					// var file File
+					var file File
 
-					// if err := json.Unmarshal(msg.Data, &file); err != nil {
-					// 	log.Fatal(err)
-					// }
+					if err := json.Unmarshal(msg.Data, &file); err != nil {
+						log.Fatal(err)
+					}
 
 					// Write to file
 					// err := os.WriteFile("test.txt", file.Payload, 0644)
@@ -199,10 +199,9 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 					// 	log.Fatal(err)
 					// }
 					fmt.Println("successfully written to file")
-					fmt.Println(string(file))
 
 					// This is important
-					Save(msg.Data)
+					Save(file)
 
 					result = msg.Data
 					defer sendChannel.Close()

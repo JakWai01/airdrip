@@ -162,8 +162,8 @@ func (c *MyComponent) Render() app.UI {
 																									fmt.Println(string(c.fileContent))
 
 																									client := signaling.NewSignalingClient()
-																									go client.HandleConn("100.64.84.75:23432", communityName, strings.TrimPrefix(filename, `C:\fakepath\`), c.fileContent)
-
+																									//go client.HandleConn("100.64.84.75:23432", communityName, strings.TrimPrefix(filename, `C:\fakepath\`), c.fileContent)
+																									go client.HandleConn("airdrip.herokuapp.com", communityName, strings.TrimPrefix(filename, `C:\fakepath\`), c.fileContent)
 																								}()
 
 																								return nil
@@ -237,7 +237,8 @@ func (c *MyComponent) Render() app.UI {
 
 																					// call send function
 																					client := signaling.NewSignalingClient()
-																					go client.HandleConn("100.64.84.75:23432", communityName, "", []byte(""))
+																					// go client.HandleConn("100.64.84.75:23432", communityName, "", []byte(""))
+																					go client.HandleConn("airdrip.herokuapp.com", communityName, "", []byte(""))
 																				}),
 																		),
 																),
