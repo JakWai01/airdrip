@@ -143,7 +143,8 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 				log.Fatal(err)
 			}
 
-			os.Exit(0)
+			// os.Exit(0)
+			return
 		}()
 
 	}()
