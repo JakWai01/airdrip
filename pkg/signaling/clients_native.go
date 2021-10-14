@@ -2,5 +2,5 @@
 
 package signaling
 
-func Save(file File) {
+func Save(file []byte) {
 }

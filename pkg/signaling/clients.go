@@ -18,14 +18,14 @@ import (
 )
 
 var (
-	result string
+	result []byte
 )
 
 func NewSignalingClient() *SignalingClient {
 	return &SignalingClient{}
 }
 
-func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filename string, file []byte) string {
+func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filename string, file []byte) []byte {
 	// The new arguments we pass
 	fmt.Println(filename)
 	fmt.Println(string(file))
@@ -111,17 +111,17 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 				// 	fmt.Println(err)
 				// }
 
-				file := File{
-					Name:    filename,
-					Payload: file,
-				}
+				// file := File{
+				// 	Name:    filename,
+				// 	Payload: file,
+				// }
 
-				message, err := json.Marshal(file)
-				if err != nil {
-					log.Fatal(err)
-				}
+				// message, err := json.Marshal(file)
+				// if err != nil {
+				// 	log.Fatal(err)
+				// }
 
-				sendErr := d.Send(message)
+				sendErr := d.Send(file)
 
 				if sendErr != nil {
 					log.Fatal(sendErr)
@@ -187,11 +187,11 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 				sendChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
 					// log.Printf("Message from DataChannel %s payload %s", sendChannel.Label(), string(msg.Data))
 
-					var file File
+					// var file File
 
-					if err := json.Unmarshal(msg.Data, &file); err != nil {
-						log.Fatal(err)
-					}
+					// if err := json.Unmarshal(msg.Data, &file); err != nil {
+					// 	log.Fatal(err)
+					// }
 
 					// Write to file
 					// err := os.WriteFile("test.txt", file.Payload, 0644)
@@ -199,12 +199,12 @@ func (s *SignalingClient) HandleConn(laddrKey string, communityKey string, filen
 					// 	log.Fatal(err)
 					// }
 					fmt.Println("successfully written to file")
-					fmt.Println(string(file.Payload))
+					fmt.Println(string(file))
 
 					// This is important
-					Save(file)
+					Save(msg.Data)
 
-					result = string(file.Payload)
+					result = msg.Data
 					defer sendChannel.Close()
 
 					exit <- struct{}{}
